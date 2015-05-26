@@ -1,0 +1,209 @@
+/* This file is (c) 2008-2011 Konstantin Isakov <ikm@users.berlios.de>
+ * Part of GoldenDict. Licensed under GPLv3 or later, see the LICENSE file */
+
+#include <vector>
+#include <algorithm>
+#include <cstdio>
+#include "dictionary.hh"
+
+#include <QCryptographicHash>
+
+// For needToRebuildIndex(), read below
+#include <QFileInfo>
+#include <QDateTime>
+
+//#include "config.hh"
+#include <QDir>
+#include <QFileInfo>
+
+namespace Dictionary {
+
+bool Request::isFinished()
+{
+#if QT_VERSION < QT_VERSION_CHECK(5,0,0)
+  return (isFinishedFlag!=0);
+#else
+  return (isFinishedFlag.load()!=0);
+#endif
+}
+
+void Request::update()
+{
+#if QT_VERSION < QT_VERSION_CHECK(5,0,0)
+  if ( isFinishedFlag == 0 )
+#else
+  if ( isFinishedFlag.load() == 0 )
+#endif
+    emit updated();
+}
+
+void Request::finish()
+{
+#if QT_VERSION < QT_VERSION_CHECK(5,0,0)
+  if ( isFinishedFlag == 0 )
+#else
+  if ( isFinishedFlag.load() == 0 )
+#endif
+  {
+    isFinishedFlag.ref();
+
+    emit finished();
+  }
+}
+
+void Request::setErrorString( QString const & str )
+{
+  Mutex::Lock _( errorStringMutex );
+
+  errorString = str;
+}
+
+QString Request::getErrorString()
+{
+  Mutex::Lock _( errorStringMutex );
+
+  return errorString;
+}
+
+
+///////// WordSearchRequest
+  
+size_t WordSearchRequest::matchesCount()
+{
+  Mutex::Lock _( dataMutex );
+  
+  return matches.size();
+}
+
+WordMatch WordSearchRequest::operator [] ( size_t index ) throw( exIndexOutOfRange )
+{
+  Mutex::Lock _( dataMutex );
+  
+  if ( index >= matches.size() )
+    throw exIndexOutOfRange();
+  
+  return matches[ index ];
+}
+
+vector< WordMatch > & WordSearchRequest::getAllMatches() throw( exRequestUnfinished )
+{
+  if ( !isFinished() )
+    throw exRequestUnfinished();
+
+  return matches;
+}
+
+////////////// DataRequest
+
+long DataRequest::dataSize()
+{
+  Mutex::Lock _( dataMutex );
+  
+  return hasAnyData ? (long)data.size() : -1;
+}
+
+void DataRequest::getDataSlice( size_t offset, size_t size, void * buffer )
+  throw( exSliceOutOfRange )
+{
+  Mutex::Lock _( dataMutex );
+
+  if ( offset + size > data.size() || !hasAnyData )
+    throw exSliceOutOfRange();
+
+  memcpy( buffer, &data[ offset ], size );
+}
+
+vector< char > & DataRequest::getFullData() throw( exRequestUnfinished )
+{
+  if ( !isFinished() )
+    throw exRequestUnfinished();
+
+  return data;
+}
+
+Class::Class( string const & id_, vector< string > const & dictionaryFiles_ ):
+  id( id_ ), dictionaryFiles( dictionaryFiles_ )
+{
+}
+
+void Class::deferredInit()
+{
+}
+
+sptr< WordSearchRequest > Class::stemmedMatch( wstring const & /*str*/,
+                                               unsigned /*minLength*/,
+                                               unsigned /*maxSuffixVariation*/,
+                                               unsigned long /*maxResults*/ )
+  throw( std::exception )
+{
+  return new WordSearchRequestInstant();
+}
+
+sptr< WordSearchRequest > Class::findHeadwordsForSynonym( wstring const & )
+  throw( std::exception )
+{
+  return new WordSearchRequestInstant();
+}
+
+vector< wstring > Class::getAlternateWritings( wstring const & )
+  throw()
+{
+  return vector< wstring >();
+}
+
+sptr< DataRequest > Class::getResource( string const & /*name*/ )
+  throw( std::exception )
+{
+  return new DataRequestInstant( false );
+}
+
+
+string makeDictionaryId( vector< string > const & dictionaryFiles ) throw()
+{
+  std::vector< string > sortedList;
+
+  sortedList = dictionaryFiles;
+
+  std::sort( sortedList.begin(), sortedList.end() );
+
+  QCryptographicHash hash( QCryptographicHash::Md5 );
+
+  for( std::vector< string >::const_iterator i = sortedList.begin();
+       i != sortedList.end(); ++i )
+    hash.addData( i->c_str(), i->size() + 1 );
+
+  return hash.result().toHex().data();
+}
+
+// While this file is not supposed to have any Qt stuff since it's used by
+// the dictionary backends, there's no platform-independent way to get hold
+// of a timestamp of the file, so we use here Qt anyway. It is supposed to
+// be fixed in the future when it's needed.
+bool needToRebuildIndex( vector< string > const & dictionaryFiles,
+                         string const & indexFile ) throw()
+{
+  unsigned long lastModified = 0;
+
+  for( std::vector< string >::const_iterator i = dictionaryFiles.begin();
+       i != dictionaryFiles.end(); ++i )
+  {
+    QFileInfo fileInfo( QString::fromLocal8Bit( i->c_str() ) );
+
+    if ( !fileInfo.exists() )
+      return true;
+
+    unsigned long ts = fileInfo.lastModified().toTime_t();
+
+    if ( ts > lastModified )
+      lastModified = ts;
+  }
+
+  QFileInfo fileInfo( QString::fromLocal8Bit( indexFile.c_str() ) );
+
+  if ( !fileInfo.exists() )
+    return true;
+
+  return fileInfo.lastModified().toTime_t() < lastModified;
+}
+
+}
