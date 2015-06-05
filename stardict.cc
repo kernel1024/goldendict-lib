@@ -30,6 +30,7 @@
 #include <QSemaphore>
 #include <QThreadPool>
 #include <QAtomicInt>
+#include <QDebug>
 
 
 namespace Stardict {
@@ -1164,6 +1165,9 @@ vector< sptr< Dictionary::Class > > makeDictionaries(
       dictionaries.push_back( new StardictDictionary( dictId,
                                                       indexFile,
                                                       dictFiles ) );
+
+      qDebug() << "Loaded: "<< dictionaries.back()->getName().c_str() << "(" <<
+                  dictionaries.back()->getWordCount() << ")";
     }
     catch( std::exception & e )
     {
