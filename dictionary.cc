@@ -20,30 +20,18 @@ namespace Dictionary {
 
 bool Request::isFinished()
 {
-#if QT_VERSION < QT_VERSION_CHECK(5,0,0)
-  return (isFinishedFlag!=0);
-#else
   return (isFinishedFlag.load()!=0);
-#endif
 }
 
 void Request::update()
 {
-#if QT_VERSION < QT_VERSION_CHECK(5,0,0)
-  if ( isFinishedFlag == 0 )
-#else
   if ( isFinishedFlag.load() == 0 )
-#endif
     emit updated();
 }
 
 void Request::finish()
 {
-#if QT_VERSION < QT_VERSION_CHECK(5,0,0)
-  if ( isFinishedFlag == 0 )
-#else
   if ( isFinishedFlag.load() == 0 )
-#endif
   {
     isFinishedFlag.ref();
 

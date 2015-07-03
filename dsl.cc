@@ -271,19 +271,11 @@ public:
 
 void DslDictionary::deferredInit()
 {
-#if QT_VERSION < QT_VERSION_CHECK(5,0,0)
-  if ( deferredInitDone == 0 )
-#else
   if ( deferredInitDone.load() == 0 )
-#endif
   {
     Mutex::Lock _( deferredInitMutex );
 
-#if QT_VERSION < QT_VERSION_CHECK(5,0,0)
-    if ( deferredInitDone != 0 )
-#else
     if ( deferredInitDone.load() != 0 )
-#endif
       return;
 
     if ( !deferredInitRunnableStarted )
@@ -307,19 +299,11 @@ string const & DslDictionary::ensureInitDone()
 
 void DslDictionary::doDeferredInit()
 {
-#if QT_VERSION < QT_VERSION_CHECK(5,0,0)
-  if ( deferredInitDone == 0 )
-#else
   if ( deferredInitDone.load() == 0 )
-#endif
   {
     Mutex::Lock _( deferredInitMutex );
 
-#if QT_VERSION < QT_VERSION_CHECK(5,0,0)
-    if ( deferredInitDone != 0 )
-#else
     if ( deferredInitDone.load() != 0 )
-#endif
       return;
 
     // Do deferred init
@@ -1001,11 +985,7 @@ void DslArticleRequestRunnable::run()
 
 void DslArticleRequest::run()
 {
-#if QT_VERSION < QT_VERSION_CHECK(5,0,0)
-  if ( isCancelled != 0 )
-#else
   if ( isCancelled.load() != 0 )
-#endif
   {
     finish();
     return;
@@ -1040,11 +1020,7 @@ void DslArticleRequest::run()
   for( unsigned x = 0; x < chain.size(); ++x )
   {
     // Check if we're cancelled occasionally
-#if QT_VERSION < QT_VERSION_CHECK(5,0,0)
-    if ( isCancelled != 0 )
-#else
     if ( isCancelled.load() != 0 )
-#endif
     {
       finish();
       return;
@@ -1182,11 +1158,7 @@ void DslResourceRequestRunnable::run()
 void DslResourceRequest::run()
 {
   // Some runnables linger enough that they are cancelled before they start
-#if QT_VERSION < QT_VERSION_CHECK(5,0,0)
-  if ( isCancelled != 0 )
-#else
   if ( isCancelled.load() != 0 )
-#endif
   {
     finish();
     return;

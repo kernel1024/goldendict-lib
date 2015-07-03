@@ -175,11 +175,7 @@ void BtreeWordSearchRunnable::run()
 
 void BtreeWordSearchRequest::run()
 {
-#if QT_VERSION < QT_VERSION_CHECK(5,0,0)
-  if ( isCancelled != 0 )
-#else
   if ( isCancelled.load() != 0 )
-#endif
   {
     finish();
     return;
@@ -224,11 +220,7 @@ void BtreeWordSearchRequest::run()
     if ( chainOffset )
     for( ; ; )
     {
-#if QT_VERSION < QT_VERSION_CHECK(5,0,0)
-      if ( isCancelled != 0 )
-#else
       if ( isCancelled.load() != 0 )
-#endif
         break;
       
       //printf( "offset = %u, size = %u\n", chainOffset - &leaf.front(), leaf.size() );
@@ -297,11 +289,7 @@ void BtreeWordSearchRequest::run()
       }
     }
 
-#if QT_VERSION < QT_VERSION_CHECK(5,0,0)
-    if ( charsLeftToChop && (isCancelled == 0 ) )
-#else
     if ( charsLeftToChop && ( isCancelled.load() == 0 ) )
-#endif
     {
       --charsLeftToChop;
       folded.resize( folded.size() - 1 );

@@ -514,11 +514,7 @@ void StardictHeadwordsRequestRunnable::run()
 
 void StardictHeadwordsRequest::run()
 {
-#if QT_VERSION < QT_VERSION_CHECK(5,0,0)
-  if ( isCancelled != 0 )
-#else
   if ( isCancelled.load() != 0 )
-#endif
   {
     finish();
     return;
@@ -532,11 +528,7 @@ void StardictHeadwordsRequest::run()
 
     for( unsigned x = 0; x < chain.size(); ++x )
     {
-#if QT_VERSION < QT_VERSION_CHECK(5,0,0)
-      if ( isCancelled != 0 )
-#else
       if ( isCancelled.load() != 0 )
-#endif
       {
         finish();
         return;
@@ -642,11 +634,7 @@ void StardictArticleRequestRunnable::run()
 
 void StardictArticleRequest::run()
 {
-#if QT_VERSION < QT_VERSION_CHECK(5,0,0)
-  if ( isCancelled != 0 )
-#else
   if ( isCancelled.load() != 0 )
-#endif
   {
     finish();
     return;
@@ -675,11 +663,7 @@ void StardictArticleRequest::run()
 
     for( unsigned x = 0; x < chain.size(); ++x )
     {
-#if QT_VERSION < QT_VERSION_CHECK(5,0,0)
-      if ( isCancelled != 0 )
-#else
       if ( isCancelled.load() != 0 )
-#endif
       {
         finish();
         return;
