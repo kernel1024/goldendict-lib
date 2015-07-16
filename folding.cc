@@ -222,7 +222,7 @@ bool isPunct( wchar ch )
     // Pd
     case 0x002D: // HYPHEN-MINUS
     case 0x058A: // ARMENIAN HYPHEN
-    case 0x1806: // MONGOLIAN TODO SOFT HYPHEN
+    case 0x1806: // MONGOLIAN SOFT HYPHEN
     case 0x2010: // HYPHEN
     case 0x2011: // NON-BREAKING HYPHEN
     case 0x2012: // FIGURE DASH
