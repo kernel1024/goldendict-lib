@@ -122,14 +122,10 @@ QPair<quint32,quint32> LangCoder::findIdsForFilename( QString const & name )
 {
   QString nameFolded = "|" + QFileInfo( name ).fileName().toCaseFolded() + "|";
 
-//  qDebug() << nameFolded;
-
   QRegExp reg( "[^a-z]([a-z]{2,3})-([a-z]{2,3})[^a-z]" ); reg.setMinimal(true);
   int off = 0;
   while ( reg.indexIn( nameFolded, off ) >= 0 )
   {
-//    qDebug() << reg.cap(1);
-//    qDebug() << reg.cap(2);
 
     quint32 from = guessId( reg.cap(1) );
     quint32 to = guessId( reg.cap(2) );

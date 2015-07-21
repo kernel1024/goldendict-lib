@@ -1150,7 +1150,7 @@ vector< sptr< Dictionary::Class > > makeDictionaries(
                                                       indexFile,
                                                       dictFiles ) );
 
-      qDebug() << "Loaded: "<< dictionaries.back()->getName().c_str() << "(" <<
+      qInfo() << "Loaded: "<< dictionaries.back()->getName().c_str() << "(" <<
                   dictionaries.back()->getWordCount() << ")";
     }
     catch( std::exception & e )
