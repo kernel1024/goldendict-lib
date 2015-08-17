@@ -25,7 +25,9 @@ SOURCES += \
     $$PWD/xdxf2html.cc \
     $$PWD/file.cc \
     $$PWD/filetype.cc \
-    $$PWD/wordfinder.cc
+    $$PWD/wordfinder.cc \
+    $$PWD/romaji.cc \
+    $$PWD/transliteration.cc
 
 HEADERS += \
     $$PWD/zipfile.hh \
@@ -55,5 +57,7 @@ HEADERS += \
     $$PWD/inc_diacritic_folding.hh \
     $$PWD/inc_case_folding.hh \
     $$PWD/filetype.hh \
-    $$PWD/wordfinder.hh
-    
+    $$PWD/wordfinder.hh \
+    $$PWD/romaji.hh \
+    $$PWD/transliteration.hh
+
