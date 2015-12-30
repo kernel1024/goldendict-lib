@@ -9,7 +9,6 @@
 #include <string>
 #include <set>
 #include <list>
-#include "globalcontrol.h"
 #include "goldendictmgr.h"
 #include "dsl.hh"
 #include "stardict.hh"
@@ -22,7 +21,6 @@
 #include "romaji.hh"
 #include "mainwindow.h"
 
-#include <QMessageBox>
 #include <QString>
 #include <QUrl>
 #include <QDebug>
@@ -169,7 +167,7 @@ std::string CGoldenDictMgr::makeHtmlHeader(const QString &word) const
 
 }
 
-void CGoldenDictMgr::loadDictionaries()
+void CGoldenDictMgr::loadDictionaries(const QStringList& dictPaths, const QString &dictIndexDir)
 {
     dictionaries.clear();
 
@@ -177,7 +175,9 @@ void CGoldenDictMgr::loadDictionaries()
 
     qInfo() << "Indexing dictionaries. Please wait.";
 
-    CDictLoader *loadDicts = new CDictLoader(this, gSet->dictPaths);
+    m_dictIndexDir = dictIndexDir;
+
+    CDictLoader *loadDicts = new CDictLoader(this, dictPaths, dictIndexDir);
 
     QObject::connect( loadDicts, SIGNAL( indexingDictionarySignal( QString const & ) ),
                       this, SLOT(showMessage(QString)) );
@@ -205,11 +205,10 @@ void CGoldenDictMgr::loadDone()
 
     if ( loadDicts->getExceptionText().size() )
     {
-      QMessageBox::critical( gSet->activeWindow, tr("JPReader"),
-                             tr("Error loading dictionaries %1").
-                             arg(QString::fromUtf8( loadDicts->getExceptionText().c_str() ) ));
+        emit showCriticalMessage(tr("Error loading dictionaries %1").
+                                 arg(QString::fromUtf8( loadDicts->getExceptionText().c_str() ) ));
 
-      return;
+        return;
     }
 
     dictionaries = loadDicts->getDictionaries();
@@ -229,7 +228,7 @@ void CGoldenDictMgr::loadDone()
     for( unsigned x = dictionaries.size(); x--; )
       ids.insert( dictionaries[ x ]->getId() );
 
-    QDir indexDir( gSet->dictIndexDir );
+    QDir indexDir( m_dictIndexDir );
 
     QStringList allIdxFiles = indexDir.entryList( QDir::Files );
 
@@ -246,17 +245,12 @@ void CGoldenDictMgr::loadDone()
 
 void CGoldenDictMgr::showMessage(const QString &msg)
 {
-    if (gSet->activeWindow!=NULL) {
-        if (msg.isEmpty())
-            gSet->activeWindow->statusBar()->clearMessage();
-        else
-            gSet->activeWindow->statusBar()->showMessage(msg);
-    }
+    emit showStatusBarMessage(msg);
 }
 
 
-CDictLoader::CDictLoader(QObject *parent, const QStringList &dictPaths)
-    : QThread(parent), paths(dictPaths), exceptionText( "Load did not finish" )
+CDictLoader::CDictLoader(QObject *parent, const QStringList &dictPaths, const QString &dictIndexDir)
+    : QThread(parent), paths(dictPaths), exceptionText( "Load did not finish" ), m_dictIndexDir(dictIndexDir)
 {
     nameFilters << "*.ifo" << "*.dat"
                 << "*.dsl" << "*.dsl.dz"  << "*.index";
@@ -309,7 +303,7 @@ void CDictLoader::handlePath(const QString &path, bool recursive)
 
     {
       std::vector< sptr< Dictionary::Class > > stardictDictionaries =
-        Stardict::makeDictionaries( allFiles, gSet->dictIndexDir.toLocal8Bit().data(), *this );
+        Stardict::makeDictionaries( allFiles, m_dictIndexDir.toLocal8Bit().data(), *this );
 
       dictionaries.insert( dictionaries.end(), stardictDictionaries.begin(),
                            stardictDictionaries.end() );
@@ -317,7 +311,7 @@ void CDictLoader::handlePath(const QString &path, bool recursive)
 
     {
       std::vector< sptr< Dictionary::Class > > dslDictionaries =
-        Dsl::makeDictionaries( allFiles, gSet->dictIndexDir.toLocal8Bit().data(), *this );
+        Dsl::makeDictionaries( allFiles, m_dictIndexDir.toLocal8Bit().data(), *this );
 
       dictionaries.insert( dictionaries.end(), dslDictionaries.begin(),
                            dslDictionaries.end() );
@@ -325,7 +319,7 @@ void CDictLoader::handlePath(const QString &path, bool recursive)
 
     {
       std::vector< sptr< Dictionary::Class > > dictdDictionaries =
-        DictdFiles::makeDictionaries( allFiles, gSet->dictIndexDir.toLocal8Bit().data(), *this );
+        DictdFiles::makeDictionaries( allFiles, m_dictIndexDir.toLocal8Bit().data(), *this );
 
       dictionaries.insert( dictionaries.end(), dictdDictionaries.begin(),
                            dictdDictionaries.end() );

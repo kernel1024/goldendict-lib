@@ -33,9 +33,10 @@ private:
     QStringList paths;
     std::vector< sptr< Dictionary::Class > > dictionaries;
     std::string exceptionText;
+    QString m_dictIndexDir;
 
 public:
-    CDictLoader(QObject * parent, const QStringList& dictPaths);
+    CDictLoader(QObject * parent, const QStringList& dictPaths, const QString& dictIndexDir);
     virtual void run();
     std::vector< sptr< Dictionary::Class > > const & getDictionaries() const
     { return dictionaries; }
@@ -139,6 +140,7 @@ public:
     QStringList getLoadedDictionaries();
 
 private:
+    QString m_dictIndexDir;
     std::string makeHtmlHeader( QString const & word ) const;
     static std::string makeNotFoundBody( QString const & word );
 
@@ -146,9 +148,11 @@ private:
     friend class ArticleNetworkAccessManager;
 
 signals:
+    void showStatusBarMessage(const QString& msg);
+    void showCriticalMessage(const QString& msg);
 
 public slots:
-    void loadDictionaries();
+    void loadDictionaries(const QStringList &dictPaths, const QString &dictIndexDir);
     void loadDone();
     void showMessage(const QString& msg);
 
