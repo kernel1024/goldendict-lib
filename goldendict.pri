@@ -2,6 +2,7 @@ INCLUDEPATH += $$PWD
 DEPENDPATH += $$PWD
 
 SOURCES += \
+    $$PWD/goldendictmgr.cpp \
     $$PWD/zipfile.cc \
     $$PWD/wstring_qt.cc \
     $$PWD/wstring.cc \
@@ -30,6 +31,7 @@ SOURCES += \
     $$PWD/transliteration.cc
 
 HEADERS += \
+    $$PWD/goldendictmgr.h \
     $$PWD/zipfile.hh \
     $$PWD/xdxf2html.hh \
     $$PWD/wstring_qt.hh \
