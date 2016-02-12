@@ -1,0 +1,12 @@
+#ifndef GOLDENDICT_GLOBAL_H
+#define GOLDENDICT_GLOBAL_H
+
+#include <QtCore/qglobal.h>
+
+#if defined(GOLDENDICT_LIBRARY)
+#  define GOLDENDICT_SHARED_EXPORT Q_DECL_EXPORT
+#else
+#  define GOLDENDICT_SHARED_EXPORT Q_DECL_IMPORT
+#endif
+
+#endif // GOLDENDICT_GLOBAL_H

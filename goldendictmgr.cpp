@@ -9,7 +9,7 @@
 #include <string>
 #include <set>
 #include <list>
-#include "goldendictmgr.h"
+#include "goldendictmgr.hh"
 #include "dsl.hh"
 #include "stardict.hh"
 #include "dictdfiles.hh"
@@ -19,7 +19,6 @@
 #include "folding.hh"
 #include "utf8.hh"
 #include "romaji.hh"
-#include "mainwindow.h"
 
 #include <QString>
 #include <QUrl>

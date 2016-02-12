@@ -7,6 +7,7 @@
 #include <QMap>
 #include <QPair>
 #include <QWidget>
+#include <QNetworkCookie>
 #include <QNetworkAccessManager>
 #include <QUrl>
 #include <QNetworkReply>
@@ -22,9 +23,11 @@
 #include "dictionary.hh"
 #include "wordfinder.hh"
 
+#include "goldendict_global.hh"
+
 class CGlobalControl;
 
-class CDictLoader : public QThread, public Dictionary::Initializing
+class GOLDENDICT_SHARED_EXPORT CDictLoader : public QThread, public Dictionary::Initializing
 {
     Q_OBJECT
 
@@ -53,7 +56,7 @@ private:
     void handlePath( const QString& path, bool recursive );
 };
 
-class ArticleRequest: public Dictionary::DataRequest
+class GOLDENDICT_SHARED_EXPORT ArticleRequest: public Dictionary::DataRequest
 {
   Q_OBJECT
 
@@ -121,7 +124,7 @@ private:
   std::string escapeSpacing( QString const & );
 };
 
-class CGoldenDictMgr : public QObject
+class GOLDENDICT_SHARED_EXPORT CGoldenDictMgr : public QObject
 {
     Q_OBJECT
 public:
@@ -158,7 +161,7 @@ public slots:
 
 };
 
-class ArticleNetworkAccessManager: public QNetworkAccessManager
+class GOLDENDICT_SHARED_EXPORT ArticleNetworkAccessManager: public QNetworkAccessManager
 {
   CGoldenDictMgr * dictMgr;
 
@@ -184,7 +187,7 @@ protected:
                                          QIODevice * outgoingData );
 };
 
-class ArticleResourceReply: public QNetworkReply
+class GOLDENDICT_SHARED_EXPORT ArticleResourceReply: public QNetworkReply
 {
   Q_OBJECT
 
@@ -224,7 +227,7 @@ private slots:
   void finishedSlot();
 };
 
-class BlockedNetworkReply: public QNetworkReply
+class GOLDENDICT_SHARED_EXPORT BlockedNetworkReply: public QNetworkReply
 {
   Q_OBJECT
 
