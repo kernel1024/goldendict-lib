@@ -862,7 +862,9 @@ string DslDictionary::nodeToHtml( ArticleDom::Node const & node )
 
     url.setScheme( "gdlookup" );
     url.setHost( "localhost" );
-    url.setPath( gd::toQString( node.renderAsText() ) );
+    QUrlQuery urlq;
+    urlq.addQueryItem("word", gd::toQString( node.renderAsText() ));
+    url.setQuery(urlq);
 
     result += string( "<a class=\"dsl_ref\" href=\"" ) + url.toEncoded().data() +"\">" + processNodeChildren( node ) + "</a>";
   }

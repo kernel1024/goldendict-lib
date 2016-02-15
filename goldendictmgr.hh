@@ -25,8 +25,6 @@
 
 #include "goldendict_global.hh"
 
-class CGlobalControl;
-
 class GOLDENDICT_SHARED_EXPORT CDictLoader : public QThread, public Dictionary::Initializing
 {
     Q_OBJECT
