@@ -93,7 +93,7 @@ sptr<Dictionary::DataRequest> CGoldenDictMgr::makeNotFoundTextFor(const QString 
 
 sptr<Dictionary::DataRequest> CGoldenDictMgr::makeEmptyPage() const
 {
-    string result = makeHtmlHeader( tr( "(untitled)" ) ) +
+    string result = makeHtmlHeader( QString( "(untitled)" ) ) +
       "</body></html>";
 
     sptr< Dictionary::DataRequestInstant > r =
@@ -110,10 +110,11 @@ QStringList CGoldenDictMgr::getLoadedDictionaries()
     QStringList res;
     res.clear();
 
-    for( unsigned x = dictionaries.size(); x--; )
-        res << tr("%1 (%2 words)")
-               .arg(QString::fromUtf8(dictionaries[x]->getName().c_str()),
-               dictionaries[x]->getWordCount());
+    for( unsigned x = dictionaries.size(); x--; ) {
+        res << QString("%1 (%2 words)")
+               .arg(QString::fromUtf8(dictionaries[x]->getName().c_str()))
+               .arg(dictionaries[x]->getWordCount());
+    }
 
     return res;
 }
@@ -124,11 +125,11 @@ std::string CGoldenDictMgr::makeNotFoundBody(const QString &word)
     string result( "<div class=\"gdnotfound\"><p>" );
 
     if ( word.size() )
-      result += tr( "No translation for <b>%1</b> was found." ).
+      result += QString( "No translation for <b>%1</b> was found." ).
                 arg( QString::fromUtf8( Html::escape( word.toUtf8().data() ).c_str() ) ).
                 toUtf8().data();
     else
-      result += tr( "No translation was found." ).toUtf8().data();
+      result += QString( "No translation was found." ).toUtf8().data();
 
     result += "</p></div>";
 
@@ -170,7 +171,7 @@ void CGoldenDictMgr::loadDictionaries(const QStringList& dictPaths, const QStrin
 {
     dictionaries.clear();
 
-    showMessage(tr("Loading dictionaries..."));
+    showMessage(QString("Loading dictionaries..."));
 
     qInfo() << "Indexing dictionaries. Please wait.";
 
@@ -193,7 +194,7 @@ void CGoldenDictMgr::loadDone()
 
     if (loadDicts==NULL) {
         qCritical() << "Unexpected call for loadDone.";
-        showMessage(tr("ERROR: Unexpected call for loadDone. Dictionaries unavailable!"));
+        showMessage(QString("ERROR: Unexpected call for loadDone. Dictionaries unavailable!"));
         return;
     }
 
@@ -204,7 +205,7 @@ void CGoldenDictMgr::loadDone()
 
     if ( loadDicts->getExceptionText().size() )
     {
-        emit showCriticalMessage(tr("Error loading dictionaries %1").
+        emit showCriticalMessage(QString("Error loading dictionaries %1").
                                  arg(QString::fromUtf8( loadDicts->getExceptionText().c_str() ) ));
 
         return;
@@ -271,7 +272,7 @@ void CDictLoader::run()
 
 void CDictLoader::indexingDictionary(const std::string &dictionaryName) throw()
 {
-    QString msg = tr("Indexing dictionary: %1").arg(QString::fromUtf8(dictionaryName.c_str()));
+    QString msg = QString("Indexing dictionary: %1").arg(QString::fromUtf8(dictionaryName.c_str()));
     emit indexingDictionarySignal( msg );
 }
 
@@ -472,7 +473,7 @@ void ArticleRequest::bodyFinished()
         closePrevSpan = true;
 
         head += string( "<div class=\"gddictname\"><span class=\"gdfromprefix\">" ) +
-          Html::escape( tr( "From " ).toUtf8().data() ) + "</span>" +
+          Html::escape( QString( "From " ).toUtf8().data() ) + "</span>" +
           Html::escape( activeDict->getName().c_str() )
            + "</div>";
 
@@ -485,7 +486,7 @@ void ArticleRequest::bodyFinished()
         if ( errorString.size() )
         {
           head += "<div class=\"gderrordesc\">" +
-            Html::escape( tr( "Query error: %1" ).arg( errorString ).toUtf8().data() )
+            Html::escape( QString( "Query error: %1" ).arg( errorString ).toUtf8().data() )
           + "</div>";
         }
 
@@ -584,7 +585,7 @@ void ArticleRequest::stemmedSearchFinished()
   if ( sr.size() )
   {
     footer += "<div class=\"gdstemmedsuggestion\"><span class=\"gdstemmedsuggestion_head\">" +
-      Html::escape( tr( "Close words: " ).toUtf8().data() ) +
+      Html::escape( QString( "Close words: " ).toUtf8().data() ) +
       "</span><span class=\"gdstemmedsuggestion_body\">";
 
     for( unsigned x = 0; x < sr.size(); ++x )
@@ -655,7 +656,7 @@ void ArticleRequest::compoundSearchNextStep( bool lastSearchSucceeded )
       {
         // Append the beginning
         footer += "<div class=\"gdstemmedsuggestion\"><span class=\"gdstemmedsuggestion_head\">" +
-          Html::escape( tr( "Compound expressions: " ).toUtf8().data() ) +
+          Html::escape( QString( "Compound expressions: " ).toUtf8().data() ) +
           "</span><span class=\"gdstemmedsuggestion_body\">";
 
         firstCompoundWasFound = true;
@@ -683,7 +684,7 @@ void ArticleRequest::compoundSearchNextStep( bool lastSearchSucceeded )
       // Now add links to all the individual words. They conclude the result.
 
       footer += "<div class=\"gdstemmedsuggestion\"><span class=\"gdstemmedsuggestion_head\">" +
-        Html::escape( tr( "Individual words: " ).toUtf8().data() ) +
+        Html::escape( QString( "Individual words: " ).toUtf8().data() ) +
         "</span><span class=\"gdstemmedsuggestion_body\">";
 
       footer += escapeSpacing( splittedWords.second[ 0 ] );
