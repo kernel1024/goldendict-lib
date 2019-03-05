@@ -152,6 +152,8 @@ public:
   bool isUncertain() const
   { return uncertain; }
 
+  virtual unsigned long getMaxResults() { return 0; }
+
 protected:
 
   // Subclasses should be filling up the 'matches' array, locking the mutex when

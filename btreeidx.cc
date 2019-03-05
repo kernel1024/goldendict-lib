@@ -166,6 +166,8 @@ public:
     isCancelled.ref();
     hasExited.acquire();
   }
+
+  virtual unsigned long getMaxResults() { return maxResults; }
 };
 
 void BtreeWordSearchRunnable::run()

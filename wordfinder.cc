@@ -264,9 +264,14 @@ void WordFinder::updateResults()
   if ( updateResultsTimer.isActive() )
     updateResultsTimer.stop(); // Can happen when we were done before it'd expire
 
+  size_t maxSearchResults = 500;
+
   for( list< sptr< Dictionary::WordSearchRequest > >::iterator i =
          finishedRequests.begin(); i != finishedRequests.end(); )
   {
+    if ((*i)->getMaxResults() > maxSearchResults)
+        maxSearchResults = (*i)->getMaxResults();
+
     for( size_t count = (*i)->matchesCount(), x = 0; x < count; ++x )
     {
       wstring match = (**i)[ x ].word;
@@ -301,8 +306,6 @@ void WordFinder::updateResults()
     }
     finishedRequests.erase( i++ );
   }
-
-  size_t maxSearchResults = 500;
 
   if ( resultsArray.size() )
   {
