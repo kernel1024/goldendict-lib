@@ -62,7 +62,7 @@ quint32 LangCoder::code3toInt(const std::string& code3)
   char code1 = tolower( code3.at(1) );
   char code0 = tolower( code3.at(0) );
 
-  return ( ((quint32)code1) << 8 ) + (quint32)code0;
+  return ( (static_cast<quint32>(code1)) << 8 ) + static_cast<quint32>(code0);
 }
 
 quint32 LangCoder::findIdForLanguage( gd::wstring const & lang )

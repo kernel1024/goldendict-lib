@@ -11,9 +11,6 @@ namespace Filetype {
 
 using std::string;
 
-/// Returns true if the name resembles the one of a sound file (i.e. ends
-/// with .wav, .ogg and such).
-bool isNameOfSound( string const & );
 /// Returns true if the name resembles the one of a picture file (i.e. ends
 /// with .jpg, .png and such).
 bool isNameOfPicture( string const & );

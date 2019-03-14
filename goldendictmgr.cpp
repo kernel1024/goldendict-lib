@@ -122,7 +122,7 @@ QStringList CGoldenDictMgr::getLoadedDictionaries()
 
 std::string CGoldenDictMgr::makeNotFoundBody(const QString &word)
 {
-    string result( "<div class=\"gdnotfound\"><p>" );
+    string result( R"(<div class="gdnotfound"><p>)" );
 
     if ( word.size() )
         result += QString( "No translation for <b>%1</b> was found." ).
@@ -140,9 +140,9 @@ std::string CGoldenDictMgr::makeNotFoundBody(const QString &word)
 std::string CGoldenDictMgr::makeHtmlHeader(const QString &word) const
 {
     string result =
-            "<!DOCTYPE html PUBLIC \"-//W3C//DTD XHTML 1.0 Transitional//EN\" \"http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd\">"
+            R"(<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">"
             "<html><head>"
-            "<meta http-equiv=\"Content-Type\" content=\"text/html; charset=utf-8\">";
+            "<meta http-equiv="Content-Type" content="text/html; charset=utf-8">)";
 
     // Add a css stylesheet
 
@@ -151,7 +151,7 @@ std::string CGoldenDictMgr::makeHtmlHeader(const QString &word) const
         builtInCssFile.open( QFile::ReadOnly );
         QByteArray css = builtInCssFile.readAll();
 
-        result += "<style type=\"text/css\" media=\"all\">\n";
+        result += R"(<style type="text/css" media="all">)";
         result += css.constData();
         result += "</style>\n";
     }
@@ -451,50 +451,52 @@ void ArticleRequest::bodyFinished()
 
                 if ( closePrevSpan )
                 {
-                    head += "</span></span><span class=\"gdarticleseparator\"></span>";
+                    head += R"(</span></span><span class="gdarticleseparator"></span>)";
                 }
                 else
                 {
                     // This is the first article
-                    head += "<script language=\"JavaScript\">"
-                            "var gdCurrentArticle=\"" + gdFrom  + "\";</script>";
+                    head += R"(<script language="JavaScript">"
+                            "var gdCurrentArticle=")";
+                    head += gdFrom;
+                    head += R"(";</script>)";
                 }
 
                 string jsVal = Html::escapeForJavaScript( dictId );
-                head += "<script language=\"JavaScript\">var gdArticleContents; ";
-                head += "if ( !gdArticleContents ) gdArticleContents = \"";
+                head += R"(<script language="JavaScript">var gdArticleContents; )";
+                head += R"(if ( !gdArticleContents ) gdArticleContents = ")";
                 head += jsVal;
-                head += " \"; else gdArticleContents += \"";
+                head += R"( "; else gdArticleContents += ")";
                 head += jsVal;
-                head += " \";</script>";
+                head += R"( ";</script>)";
 
-                head += string( "<span class=\"gdarticle" );
+                head += R"(<span class="gdarticle)";
                 if ( !closePrevSpan )
                     head += " gdactivearticle";
-                head += "\" id=\"";
+                head += R"(" id=")";
                 head += gdFrom;
-                head += "\" onClick=\"gdMakeArticleActive( '";
+                head += R"(" onClick="gdMakeArticleActive( ')";
                 head += jsVal;
-                head += "' );\" onContextMenu=\"gdMakeArticleActive( '";
+                head += R"(' );" onContextMenu="gdMakeArticleActive( ')";
                 head += jsVal;
-                head += "' );\">";
+                head += R"(' );">)";
 
                 closePrevSpan = true;
 
-                head += string( "<div class=\"gddictname\"><span class=\"gdfromprefix\">" );
+                head += string( R"(<div class="gddictname"><span class="gdfromprefix">)" );
                 head += Html::escape( QString( "From " ).toUtf8().constData() );
                 head += "</span>";
                 head += Html::escape( activeDict->getName() );
 
-                head += "</div><span class=\"gdarticlebody gdlangfrom-";
+                head += R"(</div><span class="gdarticlebody gdlangfrom-)";
                 head += LangCoder::intToCode2( activeDict->getLangFrom() ).toLatin1().constData();
-                head += "\" lang=\"";
+                head += R"(" lang=")";
                 head += LangCoder::intToCode2( activeDict->getLangTo() ).toLatin1().constData();
-                head += "\">";
+                head += R"(">)";
 
                 if ( errorString.size() )
                 {
-                    head += "<div class=\"gderrordesc\">";
+                    head += R"(<div class="gderrordesc">)";
                     head += Html::escape( QString( "Query error: %1" )
                                           .arg( errorString ).toUtf8().constData() );
                     head += "</div>";
@@ -594,9 +596,9 @@ void ArticleRequest::stemmedSearchFinished()
 
     if ( !sr.empty() )
     {
-        footer += "<div class=\"gdstemmedsuggestion\"><span class=\"gdstemmedsuggestion_head\">" +
-                  Html::escape( QString( "Close words: " ).toUtf8().constData() ) +
-                  "</span><span class=\"gdstemmedsuggestion_body\">";
+        footer += R"(<div class="gdstemmedsuggestion"><span class="gdstemmedsuggestion_head">)";
+        footer += Html::escape( QString( "Close words: " ).toUtf8().constData() );
+        footer += R"(</span><span class="gdstemmedsuggestion_body">)";
 
         for( unsigned x = 0; x < sr.size(); ++x )
         {
@@ -665,9 +667,9 @@ void ArticleRequest::compoundSearchNextStep( bool lastSearchSucceeded )
             if ( !firstCompoundWasFound )
             {
                 // Append the beginning
-                footer += "<div class=\"gdstemmedsuggestion\"><span class=\"gdstemmedsuggestion_head\">" +
-                          Html::escape( QString( "Compound expressions: " ).toUtf8().constData() ) +
-                          "</span><span class=\"gdstemmedsuggestion_body\">";
+                footer += R"(<div class="gdstemmedsuggestion"><span class="gdstemmedsuggestion_head">)";
+                footer += Html::escape( QString( "Compound expressions: " ).toUtf8().constData() );
+                footer += R"(</span><span class="gdstemmedsuggestion_body">)";
 
                 firstCompoundWasFound = true;
             }
@@ -693,9 +695,9 @@ void ArticleRequest::compoundSearchNextStep( bool lastSearchSucceeded )
 
             // Now add links to all the individual words. They conclude the result.
 
-            footer += "<div class=\"gdstemmedsuggestion\"><span class=\"gdstemmedsuggestion_head\">" +
+            footer += R"(<div class="gdstemmedsuggestion"><span class="gdstemmedsuggestion_head">)" +
                       Html::escape( QString( "Individual words: " ).toUtf8().constData() ) +
-                      "</span><span class=\"gdstemmedsuggestion_body\">";
+                      R"(</span><span class="gdstemmedsuggestion_body">)";
 
             footer += escapeSpacing( splittedWords.second[ 0 ] );
 
@@ -880,7 +882,12 @@ string ArticleRequest::linkWord( QString const & str )
     string sUrl(url.toEncoded().constData());
 
     string escapedResult = Html::escape( str.toUtf8().constData() );
-    return string( "<a href=\"" ) + sUrl + "\">" + escapedResult +"</a>";
+    string res( R"(<a href=")" );
+    res += sUrl;
+    res += R"(">)";
+    res += escapedResult;
+    res += "</a>";
+    return res;
 }
 
 std::string ArticleRequest::escapeSpacing( QString const & str )
@@ -917,7 +924,7 @@ QNetworkReply * ArticleNetworkAccessManager::createRequest( Operation op,
 
         sptr< Dictionary::DataRequest > dr = getResource( req.url(), contentType );
 
-        if ( dr.get() )
+        if ( dr )
             return new ArticleResourceReply( this, req, dr, contentType );
     }
 
@@ -1064,7 +1071,7 @@ qint64 ArticleResourceReply::bytesAvailable() const
     if ( avail < 0 )
         return 0;
 
-    return (size_t) avail - alreadyRead +  QNetworkReply::bytesAvailable();
+    return static_cast<size_t>(avail) - alreadyRead +  QNetworkReply::bytesAvailable();
 }
 
 qint64 ArticleResourceReply::readData( char * out, qint64 maxSize )
@@ -1078,7 +1085,7 @@ qint64 ArticleResourceReply::readData( char * out, qint64 maxSize )
     if ( avail < 0 )
         return finished ? -1 : 0;
 
-    size_t left = (size_t) avail - alreadyRead;
+    size_t left = static_cast<size_t>(avail) - alreadyRead;
 
     size_t toRead = maxSize < static_cast<qint64>(left) ? maxSize : left;
 

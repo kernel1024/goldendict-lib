@@ -54,9 +54,7 @@ struct IdxHeader
     uint32_t langFrom;  // Source language
     uint32_t langTo;    // Target language
 }
-#ifndef _MSC_VER
 __attribute__((packed))
-#endif
 ;
 
 bool indexIsOldOrBad( string const & indexFile )
@@ -382,7 +380,7 @@ vector< sptr< Dictionary::Class > > makeDictionaries(
 
                     if ( !tab || ! ( tab = strchr( tab + 1, '\t' ) ) || strchr( tab + 1, '\t' ) )
                     {
-                        qWarning() << "Warning: incorrect amount of tabs in a line, skipping: " << buf;
+                        qWarning() << "Incorrect amount of tabs in a line, skipping: " << buf;
                         continue;
                     }
 

@@ -70,7 +70,7 @@ bool IndexedZip::loadFile( gd::wstring const & name, vector< char > & data )
 
             QByteArray compressedData = zip.read( header.compressedSize );
 
-            if ( compressedData.size() != (int)header.compressedSize )
+            if ( compressedData.size() != static_cast<int>(header.compressedSize) )
                 return false;
 
             data.resize( header.uncompressedSize );
@@ -79,9 +79,9 @@ bool IndexedZip::loadFile( gd::wstring const & name, vector< char > & data )
 
             memset( &stream, 0, sizeof( stream ) );
 
-            stream.next_in = ( Bytef * ) compressedData.data();
+            stream.next_in = reinterpret_cast< Bytef *>(compressedData.data());
             stream.avail_in = compressedData.size();
-            stream.next_out = ( Bytef * ) &data.front();
+            stream.next_out = reinterpret_cast< Bytef *>(&data.front());
             stream.avail_out = data.size();
 
             if ( inflateInit2( &stream, -MAX_WBITS ) != Z_OK )

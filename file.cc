@@ -108,7 +108,7 @@ void Class::write( void const * buf, size_t size )
 
         if ( size ) // Something's still left? Add to buffer.
         {
-            memcpy( writeBuffer, (char const *)buf + toAdd, size );
+            memcpy( writeBuffer, static_cast<char const *>(buf) + toAdd, size );
             writeBufferLeft -= size;
         }
     }
@@ -202,7 +202,7 @@ size_t Class::tell()
     if ( writeBuffer )
         result += ( WriteBufferSize - writeBufferLeft );
 
-    return ( size_t ) result;
+    return static_cast< size_t>(result);
 }
 
 bool Class::eof()

@@ -47,28 +47,6 @@ bool endsWith( string const & str, string const & tail )
 
 }
 
-bool isNameOfSound( string const & name )
-{
-  string s = simplifyString( name );
-
-  return
-    endsWith( s, ".wav" ) ||
-    endsWith( s, ".au" ) ||
-    endsWith( s, ".voc" ) ||
-    endsWith( s, ".ogg" ) ||
-    endsWith( s, ".mp3" ) ||
-    endsWith( s, ".m4a" ) ||
-    endsWith( s, ".aac" ) ||
-    endsWith( s, ".flac" ) ||
-    endsWith( s, ".mid" ) ||
-    endsWith( s, ".kar" ) ||
-    endsWith( s, ".mpc" ) ||
-    endsWith( s, ".wma" ) ||
-    endsWith( s, ".wv" ) ||
-    endsWith( s, ".ape" ) ||
-    endsWith( s, ".spx" );
-}
-
 bool isNameOfPicture( string const & name )
 {
   string s = simplifyString( name );

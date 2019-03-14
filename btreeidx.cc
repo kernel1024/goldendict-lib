@@ -212,7 +212,7 @@ void BtreeWordSearchRequest::run()
 
     if ( maxSuffixVariation >= 0 )
     {
-        charsLeftToChop = initialFoldedSize - (int)minLength;
+        charsLeftToChop = initialFoldedSize - static_cast<int>(minLength);
 
         if ( charsLeftToChop < 0 )
             charsLeftToChop = 0;
@@ -258,7 +258,7 @@ void BtreeWordSearchRequest::run()
                         // Skip middle matches, if requested. If suffix variation is specified,
                         // make sure the string isn't larger than requested.
                         if ( ( allowMiddleMatches || Folding::apply( Utf8::decode( cx.prefix ) ).empty() ) &&
-                             ( maxSuffixVariation < 0 || (int)resultFolded.size() - initialFoldedSize <= maxSuffixVariation ) )
+                             ( maxSuffixVariation < 0 || static_cast<int>(resultFolded.size()) - initialFoldedSize <= maxSuffixVariation ) )
                             matches.emplace_back( Utf8::decode( cx.prefix + cx.word ) );
                     }
 
@@ -291,14 +291,6 @@ void BtreeWordSearchRequest::run()
 
                         nextLeaf = dict.idxFile->read< uint32_t >();
                         chainOffset = &leaf.front() + sizeof( uint32_t );
-
-                        uint32_t leafEntries = *(uint32_t *)&leaf.front();
-
-                        if ( leafEntries == 0xffffFFFF )
-                        {
-                            //printf( "bah!\n" );
-                            exit( 1 );
-                        }
                     }
                     else
                         break; // That was the last leaf
@@ -327,7 +319,7 @@ sptr< Dictionary::WordSearchRequest > BtreeDictionary::stemmedMatch(
         wstring const & str, unsigned minLength, unsigned maxSuffixVariation,
         unsigned long maxResults )
 {
-    return new BtreeWordSearchRequest( *this, str, minLength, (int)maxSuffixVariation,
+    return new BtreeWordSearchRequest( *this, str, minLength, static_cast<int>(maxSuffixVariation),
                                        false, maxResults );
 }
 
@@ -359,7 +351,7 @@ void BtreeIndex::readNode( uint32_t offset, vector< char > & out )
 
     unsigned long decompressedLength = out.size();
 
-    if ( uncompress( (unsigned char *)&out.front(),
+    if ( uncompress( reinterpret_cast<unsigned char *>(&out.front()),
                      &decompressedLength,
                      &compressedData.front(),
                      compressedData.size() ) != Z_OK ||
@@ -403,7 +395,7 @@ char const * BtreeIndex::findChainOffsetExactOrPrefix( wstring const & target,
     {
         // Is it a leaf or a node?
 
-        uint32_t leafEntries = *(uint32_t *)leaf;
+        uint32_t leafEntries = *(reinterpret_cast<uint32_t *>(const_cast<char *>(leaf)));
 
         if ( leafEntries == 0xffffFFFF )
         {
@@ -411,7 +403,7 @@ char const * BtreeIndex::findChainOffsetExactOrPrefix( wstring const & target,
 
             //printf( "=>a node\n" );
 
-            uint32_t const * offsets = (uint32_t *)leaf + 1;
+            uint32_t const * offsets = reinterpret_cast<const uint32_t *>(leaf) + 1;
 
             char const * ptr = leaf + sizeof( uint32_t ) +
                                ( indexNodeSize + 1 ) * sizeof( uint32_t );
@@ -767,7 +759,7 @@ static uint32_t buildBtreeNode( IndexedWords::const_iterator & nextIndex,
         uncompressedData.resize( sizeof( uint32_t ) + totalChainsLength );
 
         // First uint32_t indicates that this is a leaf.
-        *(uint32_t *)&uncompressedData.front() = indexSize;
+        *reinterpret_cast<uint32_t *>(&uncompressedData.front()) = indexSize;
 
         unsigned char * ptr = &uncompressedData.front() + sizeof( uint32_t );
 
@@ -805,13 +797,13 @@ static uint32_t buildBtreeNode( IndexedWords::const_iterator & nextIndex,
         uncompressedData.resize( sizeof( uint32_t ) + ( maxElements + 1 ) * sizeof( uint32_t ) );
 
         // First uint32_t indicates that this is a node.
-        *(uint32_t *)&uncompressedData.front() = 0xffffFFFF;
+        *reinterpret_cast<uint32_t *>(&uncompressedData.front()) = 0xffffFFFF;
 
         unsigned prevEntry = 0;
 
         for( unsigned x = 0; x < maxElements; ++x )
         {
-            unsigned curEntry = (uint64_t) indexSize * ( x + 1 ) / ( maxElements + 1 );
+            unsigned curEntry = static_cast<uint64_t>(indexSize) * ( x + 1 ) / ( maxElements + 1 );
 
             uint32_t offset = buildBtreeNode( nextIndex,
                                               curEntry - prevEntry,
@@ -884,7 +876,7 @@ static uint32_t buildBtreeNode( IndexedWords::const_iterator & nextIndex,
         // A link to the next leef, which is zero and which will be updated
         // should we happen to have another leaf.
 
-        file.write( ( uint32_t ) 0 );
+        file.write( 0 );
 
         uint32_t here = file.tell();
 
@@ -997,7 +989,7 @@ IndexInfo buildIndex( IndexedWords const & indexedWords, File::Class & file )
     // We try to stick to two-level tree for most dictionaries. Try finding
     // the right size for it.
 
-    size_t btreeMaxElements = ( (size_t) sqrt( (double) indexSize ) ) + 1;
+    size_t btreeMaxElements = ( static_cast<size_t>(sqrt( static_cast<double>(indexSize) )) ) + 1;
 
     if ( btreeMaxElements < BtreeMinElements )
         btreeMaxElements = BtreeMinElements;

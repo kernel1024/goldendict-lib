@@ -45,7 +45,7 @@ uint32_t Writer::startNewBlock()
   // The address is comprised of the offset within the chunk (in lower
   // 16 bits, always fits there since ChunkMaxSize-1 does) and the
   // number of the chunk, which is therefore limited to be 65535 max.
-  return bufferUsed | ( (uint32_t)offsets.size() << 16 );
+  return bufferUsed | ( static_cast<uint32_t>(offsets.size()) << 16 );
 }
 
 void Writer::addToBlock( void const * data, size_t size )
@@ -78,8 +78,8 @@ void Writer::saveCurrentChunk()
 
   offsets.push_back( file.tell() );
 
-  file.write( (uint32_t) bufferUsed );
-  file.write( (uint32_t) compressedSize );
+  file.write( static_cast<uint32_t>(bufferUsed) );
+  file.write( static_cast<uint32_t>(compressedSize) );
   file.write( &bufferCompressed.front(), compressedSize );
 
   bufferUsed = 0;
@@ -104,7 +104,7 @@ uint32_t Writer::finish()
 
   uint32_t offset = file.tell();
 
-  file.write( (uint32_t) offsets.size() );
+  file.write( static_cast<uint32_t>(offsets.size()) );
 
   if ( !offsets.empty() )
     file.write( &offsets.front(), offsets.size() * sizeof( uint32_t ) );
@@ -151,7 +151,7 @@ char * Reader::getBlock( uint32_t address, vector< char > & chunk )
 
     unsigned long decompressedLength = chunk.size();
 
-    if ( uncompress( (unsigned char *)&chunk.front(),
+    if ( uncompress( reinterpret_cast<unsigned char *>(&chunk.front()),
                      &decompressedLength,
                      &compressedData.front(),
                      compressedData.size() ) != Z_OK ||

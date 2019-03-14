@@ -32,7 +32,6 @@ SOURCES += \
     dictdfiles.cc \
     chunkedstorage.cc \
     btreeidx.cc \
-    audiolink.cc \
     xdxf2html.cc \
     file.cc \
     filetype.cc \
@@ -63,7 +62,6 @@ HEADERS += \
     dictdfiles.hh \
     chunkedstorage.hh \
     btreeidx.hh \
-    audiolink.hh \
     file.hh \
     inc_diacritic_folding.hh \
     inc_case_folding.hh \

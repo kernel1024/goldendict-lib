@@ -11,11 +11,7 @@
 #include <vector>
 #include <map>
 
-#ifdef _MSC_VER
-#include <stdint_msvc.h>
-#else
-#include <stdint.h>
-#endif
+#include <cstdint>
 
 /// A base for the dictionary which creates a btree index to look up
 /// the words.

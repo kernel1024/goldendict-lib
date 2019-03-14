@@ -88,9 +88,7 @@ struct IdxHeader
     uint32_t langFrom;  // Source language
     uint32_t langTo;    // Target language
 }
-#ifndef _MSC_VER
 __attribute__((packed))
-#endif
 ;
 
 bool indexIsOldOrBad( string const & indexFile )
@@ -316,7 +314,7 @@ void StardictDictionary::loadArticle( uint32_t address,
             else
                 if ( !size )
                 {
-                    qWarning() << "Warning: short entry for the word encountered: " << headword.c_str();
+                    qWarning() << "Short entry for the word encountered: " << headword.c_str();
                     break;
                 }
 
@@ -330,7 +328,7 @@ void StardictDictionary::loadArticle( uint32_t address,
 
                 if ( size < entrySize )
                 {
-                    qWarning() << "Warning: malformed entry for the word encountered. " << headword.c_str();
+                    qWarning() << "Malformed entry for the word encountered. " << headword.c_str();
                     break;
                 }
 
@@ -351,7 +349,7 @@ void StardictDictionary::loadArticle( uint32_t address,
                     {
                         if ( size < sizeof( uint32_t ) )
                         {
-                            qWarning() << "Warning: malformed entry for the word encountered: "
+                            qWarning() << "Malformed entry for the word encountered: "
                                        << headword.c_str();
                             break;
                         }
@@ -366,7 +364,7 @@ void StardictDictionary::loadArticle( uint32_t address,
 
                     if ( size < entrySize )
                     {
-                        qWarning() << "Warning: malformed entry for the word encountered: "
+                        qWarning() << "Malformed entry for the word encountered: "
                                    << headword.c_str();
                         break;
                     }
@@ -378,7 +376,7 @@ void StardictDictionary::loadArticle( uint32_t address,
                 }
                 else
                 {
-                    qWarning() << "Warning: non-alpha entry type "
+                    qWarning() << "Non-alpha entry type "
                                << QString::number(type,16) << " for the word encountered: "
                                << headword.c_str();
                     break;
@@ -397,7 +395,7 @@ void StardictDictionary::loadArticle( uint32_t address,
 
                 if ( size < len + 2 )
                 {
-                    qWarning() << "Warning: malformed entry for the word encountered: " << headword.c_str();
+                    qWarning() << "Malformed entry for the word encountered: " << headword.c_str();
                     break;
                 }
 
@@ -412,7 +410,7 @@ void StardictDictionary::loadArticle( uint32_t address,
                     // An entry which havs its size before contents
                     if ( size < sizeof( uint32_t ) + 1 )
                     {
-                        qWarning() << "Warning: malformed entry for the word encountered: "
+                        qWarning() << "Malformed entry for the word encountered: "
                                    << headword.c_str();
                         break;
                     }
@@ -425,7 +423,7 @@ void StardictDictionary::loadArticle( uint32_t address,
 
                     if ( size < sizeof( uint32_t ) + 1 + entrySize )
                     {
-                        qWarning() << "Warning: malformed entry for the word encountered: "
+                        qWarning() << "Malformed entry for the word encountered: "
                                    << headword.c_str();
                         break;
                     }
@@ -437,8 +435,9 @@ void StardictDictionary::loadArticle( uint32_t address,
                 }
                 else
                 {
-                    qWarning() << "Warning: non-alpha entry type "
-                               << QString::number((unsigned)*ptr,16) << " for the word encountered: "
+                    qWarning() << "Non-alpha entry type "
+                               << QString::number(static_cast<unsigned>(*ptr),16)
+                               << " for the word encountered: "
                                << headword.c_str();
                     break;
                 }
@@ -754,8 +753,8 @@ void StardictArticleRequest::run()
             result += cleaner;
         }
         result = QString::fromUtf8( result.c_str() )
-                 .replace( QRegExp( "(<\\s*a\\s+[^>]*href\\s*=\\s*[\"']\\s*)bword://", Qt::CaseInsensitive ),
-                           "\\1bword:" )
+                 .replace( QRegExp( R"((<\s*a\s+[^>]*href\s*=\s*["']\s*)bword://)", Qt::CaseInsensitive ),
+                           R"(\1bword:)" )
                  .toUtf8().constData();
 
         Mutex::Lock _( dataMutex );
@@ -950,7 +949,7 @@ static void handleIdxSynFile( string const & fileName,
                                    sizeof( uint32_t ) * 2 ) >
              &image.back() )
         {
-            qWarning() << "Warning: sudden end of file: " << fileName.c_str();
+            qWarning() << "Sudden end of file: " << fileName.c_str();
             break;
         }
 
@@ -1081,7 +1080,7 @@ vector< sptr< Dictionary::Class > > makeDictionaries(
                 else
                     if ( !ifo.synwordcount )
                     {
-                        qWarning() << "Warning: ignoring .syn file, since there's no synwordcount in .ifo specified: "
+                        qWarning() << "Ignoring .syn file, since there's no synwordcount in .ifo specified: "
                                    << synFileName.c_str();
                     }
 

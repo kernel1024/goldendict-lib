@@ -428,7 +428,7 @@ void ArticleDom::closeTag( wstring const & name,
     else
         if ( warn )
         {
-            qWarning() << "Warning: no corresponding opening tag for closing tag found: " << name.c_str();
+            qWarning() << "No corresponding opening tag for closing tag found: " << name.c_str();
         }
 }
 
@@ -595,7 +595,7 @@ DslScanner::DslScanner( string const & fileName ):
             if ( !needExactEncoding )
             {
                 // We don't need that!
-                qWarning() << "Warning: encoding was specified in a Unicode file, ignoring.";
+                qWarning() << "Encoding was specified in a Unicode file, ignoring.";
             }
             else
                 if ( !wcscasecmp( arg.c_str(), GD_NATIVE_TO_WS( L"Latin" ) ) )
@@ -633,7 +633,7 @@ DslScanner::~DslScanner()
 
 bool DslScanner::readNextLine( wstring & out, size_t & offset )
 {
-    offset = (size_t)( gztell( f ) - readBufferLeft );
+    offset = static_cast<size_t>( gztell( f ) - readBufferLeft );
 
     // For now we just read one char at a time
     size_t readMultiple = distanceToBytes( 1 );
@@ -661,7 +661,7 @@ bool DslScanner::readNextLine( wstring & out, size_t & offset )
                     throw exCantReadDslFile();
 
                 readBufferPtr = readBuffer;
-                readBufferLeft += (size_t) result;
+                readBufferLeft += static_cast<size_t>(result);
             }
         }
 
@@ -683,8 +683,8 @@ bool DslScanner::readNextLine( wstring & out, size_t & offset )
 
                 return true;
             }
-            else
-                return false;
+
+            return false;
         }
 
         // Check that we have chars to write
@@ -796,13 +796,13 @@ void processUnsortedParts( wstring & str, bool strip )
                 str.erase( x, 1 );
                 continue;
             }
-            else
-                if ( refCount == 1 )
-                {
-                    // First opening brace. Save this position, we will be erasing the
-                    // whole range when we encounter the last closing brace.
-                    startPos = x;
-                }
+
+            if ( refCount == 1 )
+            {
+                // First opening brace. Save this position, we will be erasing the
+                // whole range when we encounter the last closing brace.
+                startPos = x;
+            }
         }
         else
             if ( ch == '}' )
@@ -811,7 +811,7 @@ void processUnsortedParts( wstring & str, bool strip )
 
                 if ( refCount < 0 )
                 {
-                    qWarning() << "Warning: an unmatched closing brace was encountered.";
+                    qWarning() << "An unmatched closing brace was encountered.";
                     refCount = 0;
                     // But we remove that thing either way
                     str.erase( x, 1 );
@@ -839,7 +839,7 @@ void processUnsortedParts( wstring & str, bool strip )
 
     if ( strip && refCount )
     {
-        qWarning() << "Warning: unclosed brace(s) encountered.";
+        qWarning() << "Unclosed brace(s) encountered.";
         str.erase( startPos );
     }
 }

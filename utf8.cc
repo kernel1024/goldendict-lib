@@ -8,7 +8,7 @@ namespace Utf8 {
 
 size_t encode( wchar const * in, size_t inSize, char * out_ )
 {
-  auto out = (unsigned char *) out_;
+  auto out = reinterpret_cast<unsigned char *>(out_);
 
   while( inSize-- )
   {
@@ -36,12 +36,12 @@ size_t encode( wchar const * in, size_t inSize, char * out_ )
     }
   }
 
-  return out - (unsigned char *) out_;
+  return out - reinterpret_cast<unsigned char *>(out_);
 }
 
 long decode( char const * in_, size_t inSize, wchar * out_ )
 {
-  auto in = (unsigned char const *) in_;
+  auto in = reinterpret_cast<unsigned char const *>(in_);
   wchar * out = out_;
 
   while( inSize-- )
@@ -66,19 +66,19 @@ long decode( char const * in_, size_t inSize, wchar * out_ )
 
             inSize -= 3;
 
-            result = ( (wchar )*in++ & 7 ) << 18;
+            result = ( static_cast<wchar>(*in++) & 7 ) << 18;
 
             if ( ( *in & 0xC0 ) != 0x80 )
               return -1;
-            result |= ( (wchar)*in++ & 0x3F ) << 12;
+            result |= ( static_cast<wchar>(*in++) & 0x3F ) << 12;
 
             if ( ( *in & 0xC0 ) != 0x80 )
               return -1;
-            result |= ( (wchar)*in++ & 0x3F ) << 6;
+            result |= ( static_cast<wchar>(*in++) & 0x3F ) << 6;
 
             if ( ( *in & 0xC0 ) != 0x80 )
               return -1;
-            result |= (wchar)*in++ & 0x3F;
+            result |= static_cast<wchar>(*in++) & 0x3F;
           }
           else
           {
@@ -89,15 +89,15 @@ long decode( char const * in_, size_t inSize, wchar * out_ )
 
             inSize -= 2;
 
-            result = ( (wchar )*in++ & 0xF ) << 12;
+            result = ( static_cast<wchar>(*in++) & 0xF ) << 12;
 
             if ( ( *in & 0xC0 ) != 0x80 )
               return -1;
-            result |= ( (wchar)*in++ & 0x3F ) << 6;
+            result |= ( static_cast<wchar>(*in++) & 0x3F ) << 6;
 
             if ( ( *in & 0xC0 ) != 0x80 )
               return -1;
-            result |= (wchar)*in++ & 0x3F;
+            result |= static_cast<wchar>(*in++) & 0x3F;
           }
         }
         else
@@ -108,11 +108,11 @@ long decode( char const * in_, size_t inSize, wchar * out_ )
 
           --inSize;
 
-          result = ( (wchar )*in++ & 0x1F ) << 6;
+          result = ( static_cast<wchar>(*in++) & 0x1F ) << 6;
 
           if ( ( *in & 0xC0 ) != 0x80 )
             return -1;
-          result |= (wchar)*in++ & 0x3F;
+          result |= static_cast<wchar>(*in++) & 0x3F;
         }
       }
       else

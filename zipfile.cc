@@ -73,7 +73,7 @@ bool positionAtCentralDir( QFile & zip )
 
     int lastIndex = eocBuffer.size() - sizeof( EndOfCdirRecord );
 
-    QByteArray endOfCdirRecordSignature( (char const *)&endOfCdirRecordSignatureValue,
+    QByteArray endOfCdirRecordSignature( reinterpret_cast<char const *>(&endOfCdirRecordSignatureValue),
                                          sizeof( endOfCdirRecordSignatureValue ) );
 
     EndOfCdirRecord endOfCdirRecord {};
@@ -112,7 +112,7 @@ bool readNextEntry( QFile & zip, CentralDirEntry & entry )
 {
     CentralFileHeaderRecord record {};
 
-    if ( zip.read( (char *)&record, sizeof( record ) ) != sizeof( record ) )
+    if ( zip.read( reinterpret_cast<char *>(&record), sizeof( record ) ) != sizeof( record ) )
         return false;
 
     if ( record.signature != centralFileHeaderSignature )
@@ -144,7 +144,7 @@ bool readLocalHeader( QFile & zip, LocalFileHeader & entry )
 {
     LocalFileHeaderRecord record {};
 
-    if ( zip.read( (char *)&record, sizeof( record ) ) != sizeof( record ) )
+    if ( zip.read( reinterpret_cast<char *>(&record), sizeof( record ) ) != sizeof( record ) )
         return false;
 
     if ( record.signature != localFileHeaderSignature )

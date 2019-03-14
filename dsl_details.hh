@@ -103,7 +103,7 @@ class DslScanner
   DslIconv iconv;
   wstring dictionaryName;
   wstring langFrom, langTo;
-  char readBuffer[ 65536 ];
+  char readBuffer[ 65536 ]{};
   char * readBufferPtr;
   size_t readBufferLeft;
   vector< wchar > wcharBuffer;
