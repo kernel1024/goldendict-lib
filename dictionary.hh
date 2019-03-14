@@ -8,7 +8,6 @@
 #include <string>
 #include <map>
 #include <QObject>
-#include <QIcon>
 #include "sptr.hh"
 #include "ex.hh"
 #include "mutex.hh"
@@ -140,11 +139,11 @@ public:
 
   /// Returns the match with the given zero-based index, which should be less
   /// than matchesCount().
-  WordMatch operator [] ( size_t index ) throw( exIndexOutOfRange );
+  WordMatch operator [] ( size_t index );
 
   /// Returns all the matches found. Since no further locking can or would be
   /// done, this can only be called after the request has finished.
-  vector< WordMatch > & getAllMatches() throw( exRequestUnfinished );
+  vector< WordMatch > & getAllMatches();
 
   /// Returns true if the match was uncertain -- that is, there may be more
   /// results in the dictionary itself, the dictionary index isn't good enough
@@ -182,12 +181,11 @@ public:
 
   /// Writes "size" bytes starting from "offset" of the data read to the given
   /// buffer. "size + offset" must be <= than dataSize().
-  void getDataSlice( size_t offset, size_t size, void * buffer )
-    throw( exSliceOutOfRange );
+  void getDataSlice( size_t offset, size_t size, void * buffer );
 
   /// Returns all the data read. Since no further locking can or would be
   /// done, this can only be called after the request has finished.
-  vector< char > & getFullData() throw( exRequestUnfinished );
+  vector< char > & getFullData();
 
   DataRequest(): hasAnyData( false ) {}
 
@@ -272,41 +270,31 @@ public:
   virtual void deferredInit();
 
   /// Returns the dictionary's id.
-  string getId() throw()
+  string getId()
   { return id; }
 
   /// Returns the list of file names the dictionary consists of.
-  vector< string > const & getDictionaryFilenames() throw()
+  vector< string > const & getDictionaryFilenames()
   { return dictionaryFiles; }
 
   /// Returns the dictionary's full name, utf8.
-  virtual string getName() throw()=0;
+  virtual string getName() =0;
 
   /// Returns all the available properties, like the author's name, copyright,
   /// description etc. All strings are in utf8.
-  virtual map< Property, string > getProperties() throw()=0;
+  virtual map< Property, string > getProperties()=0;
 
   /// Returns the features the dictionary possess. See the Feature enum for
   /// their list.
-  virtual Features getFeatures() const throw()
+  virtual Features getFeatures() const
   { return NoFeatures; }
 
   /// Returns the number of articles in the dictionary.
-  virtual unsigned long getArticleCount() throw()=0;
+  virtual unsigned long getArticleCount()=0;
 
   /// Returns the number of words in the dictionary. This can be equal to
   /// the number of articles, or can be larger if some synonyms are present.
-  virtual unsigned long getWordCount() throw()=0;
-
-  /// Returns the dictionary's icon.
-  virtual QIcon getIcon() throw()
-  { return QIcon(); }
-
-  /// Returns the dictionary's native icon. Dsl icons are usually rectangular,
-  /// and are adapted by getIcon() to be square. This function allows getting
-  /// the original icon with no geometry transformations applied.
-  virtual QIcon getNativeIcon() throw()
-  { return getIcon(); }
+  virtual unsigned long getWordCount() =0;
 
   /// Returns the dictionary's source language.
   virtual quint32 getLangFrom() const
@@ -322,7 +310,7 @@ public:
   /// be stored. The whole operation is supposed to be fast, though some
   /// dictionaries, the network ones particularly, may of course be slow.
   virtual sptr< WordSearchRequest > prefixMatch( wstring const &,
-                                                 unsigned long maxResults ) throw( std::exception )=0;
+                                                 unsigned long maxResults )=0;
 
   /// Looks up a given word in the dictionary, aiming to find different forms
   /// of the given word by allowing suffix variations. This means allowing words
@@ -335,14 +323,13 @@ public:
   virtual sptr< WordSearchRequest > stemmedMatch( wstring const &,
                                                   unsigned minLength,
                                                   unsigned maxSuffixVariation,
-                                                  unsigned long maxResults ) throw( std::exception );
+                                                  unsigned long maxResults );
 
   /// Finds known headwords for the given word, that is, the words for which
   /// the given word is a synonym. If a dictionary can't perform this operation,
   /// it should leave the default implementation which always returns an empty
   /// result.
-  virtual sptr< WordSearchRequest > findHeadwordsForSynonym( wstring const & )
-    throw( std::exception );
+  virtual sptr< WordSearchRequest > findHeadwordsForSynonym( wstring const & );
 
   /// For a given word, provides alternate writings of it which are to be looked
   /// up alongside with it. Transliteration dictionaries implement this. The
@@ -350,7 +337,7 @@ public:
   /// supposed to be very fast and simple, and the results are thus returned
   /// syncronously.
   virtual vector< wstring > getAlternateWritings( wstring const & )
-    throw();
+    ;
   
   /// Returns a definition for the given word. The definition should
   /// be an html fragment (without html/head/body tags) in an utf8 encoding.
@@ -361,15 +348,13 @@ public:
   /// 'Websites' feature.
   virtual sptr< DataRequest > getArticle( wstring const &,
                                           vector< wstring > const & alts,
-                                          wstring const & context = wstring() )
-    throw( std::exception )=0;
+                                          wstring const & context = wstring() )=0;
 
   /// Loads contents of a resource named 'name' into the 'data' vector. This is
   /// usually a picture file referenced in the article or something like that.
   /// The default implementation always returns the non-existing resource
   /// response.
-  virtual sptr< DataRequest > getResource( string const & /*name*/ )
-    throw( std::exception );
+  virtual sptr< DataRequest > getResource( string const & /*name*/ );
 
   virtual ~Class()
   {}
@@ -384,7 +369,7 @@ public:
   /// dictionary is being indexed. Since indexing can take some time, this
   /// is useful to show in some kind of a splash screen.
   /// The dictionaryName is in utf8.
-  virtual void indexingDictionary( string const & dictionaryName ) throw()=0;
+  virtual void indexingDictionary( string const & dictionaryName ) =0;
 
   virtual ~Initializing()
   {}
@@ -395,7 +380,7 @@ public:
 /// hashing the file names. This id should be used to identify dictionary
 /// and for the index file name, if one is needed.
 /// This function is supposed to be used by dictionary implementations.
-string makeDictionaryId( vector< string > const & dictionaryFiles ) throw();
+string makeDictionaryId( vector< string > const & dictionaryFiles ) ;
 
 /// Checks if it is needed to regenerate index file based on its timestamp
 /// and the timestamps of the dictionary files. If some files are newer than
@@ -403,7 +388,7 @@ string makeDictionaryId( vector< string > const & dictionaryFiles ) throw();
 /// dictionary files don't exist, returns true, too.
 /// This function is supposed to be used by dictionary implementations.
 bool needToRebuildIndex( vector< string > const & dictionaryFiles,
-                         string const & indexFile ) throw();
+                         string const & indexFile ) ;
 
 }
 

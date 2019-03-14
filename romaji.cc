@@ -81,7 +81,8 @@ HepburnKatakana::HepburnKatakana()
   ins( "tsa", "ツァ" ); ins( "tse", "ツェ" ); ins( "tso", "ツォ" ); 
   ins( "fa", "ファ" ); ins( "fi", "フィ" ); ins( "fe", "フェ" ); ins( "fo", "フォ" ); 
   ins( "fyu", "フュ" ); 
-
+  // Long vowel mark
+  ins( "-", "ー" );
   // Double consonants
 
   ins( "kka", "ッカ" ); ins( "kki", "ッキ" ); ins( "kku", "ック" ); ins( "kke", "ッケ" ); ins( "kko", "ッコ" ); ins( "kkya", "ッキャ" ); ins( "kkyu", "ッキュ" ); ins( "kkyo", "ッキョ" );
@@ -91,7 +92,6 @@ HepburnKatakana::HepburnKatakana()
 }
 
 vector< sptr< Dictionary::Class > > makeDictionaries()
-throw( std::exception )
 {
     vector< sptr< Dictionary::Class > > result;
 
@@ -99,15 +99,17 @@ throw( std::exception )
     result.push_back(
                 new Transliteration::TransliterationDictionary(
                     "94eae5a5aaf5b0a900490f4d6b36aac0",
-                    QCoreApplication::translate( "Romaji", "Hepburn Romaji for Hiragana" ).toUtf8().data(),
-                    QIcon(), hh, false ) );
+                    QCoreApplication::translate( "Romaji", "Hepburn Romaji for Hiragana" )
+                    .toUtf8().constData(),
+                    hh, false ) );
 
     static HepburnKatakana hk;
     result.push_back(
                 new Transliteration::TransliterationDictionary(
                     "3252a35767d3f6e85e3e39069800dd2f",
-                    QCoreApplication::translate( "Romaji", "Hepburn Romaji for Katakana" ).toUtf8().data(),
-                    QIcon(), hk, false ) );
+                    QCoreApplication::translate( "Romaji", "Hepburn Romaji for Katakana" )
+                    .toUtf8().constData(),
+                    hk, false ) );
 
     return result;
 }

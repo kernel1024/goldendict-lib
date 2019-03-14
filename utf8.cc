@@ -8,7 +8,7 @@ namespace Utf8 {
 
 size_t encode( wchar const * in, size_t inSize, char * out_ )
 {
-  unsigned char * out = (unsigned char *) out_;
+  auto out = (unsigned char *) out_;
 
   while( inSize-- )
   {
@@ -41,7 +41,7 @@ size_t encode( wchar const * in, size_t inSize, char * out_ )
 
 long decode( char const * in_, size_t inSize, wchar * out_ )
 {
-  unsigned char const * in = (unsigned char const *) in_;
+  auto in = (unsigned char const *) in_;
   wchar * out = out_;
 
   while( inSize-- )
@@ -131,16 +131,22 @@ long decode( char const * in_, size_t inSize, wchar * out_ )
   return out - out_;
 }
 
-string encode( wstring const & in ) throw()
+string encode( wstring const & in )
 {
+  if ( in.empty() )
+    return string();
+
   std::vector< char > buffer( in.size() * 4 );
 
   return string( &buffer.front(),
                  encode( in.data(), in.size(), &buffer.front() ) );
 }
 
-wstring decode( string const & in ) throw( exCantDecode )
+wstring decode( string const & in )
 {
+  if ( in.empty() )
+    return wstring();
+
   std::vector< wchar > buffer( in.size() );
 
   long result = decode( in.data(),  in.size(), &buffer.front() );
@@ -149,6 +155,23 @@ wstring decode( string const & in ) throw( exCantDecode )
     throw exCantDecode( in );
 
   return wstring( &buffer.front(), result );
+}
+
+bool isspace( int c )
+{
+  switch( c )
+  {
+    case ' ':
+    case '\f':
+    case '\n':
+    case '\r':
+    case '\t':
+    case '\v':
+      return true;
+
+    default:
+      return false;
+  }
 }
 
 }

@@ -10,28 +10,28 @@ namespace ZipFile {
 /// End-of-central-directory record, as is
 struct EndOfCdirRecord
 {
-  quint32 signature;
-  quint16 numDisk, numDiskCd, totalEntriesDisk, totalEntries;
-  quint32 size, offset;
-  quint16 commentLength;
+    quint32 signature;
+    quint16 numDisk, numDiskCd, totalEntriesDisk, totalEntries;
+    quint32 size, offset;
+    quint16 commentLength;
 } __attribute__((packed));
 
 struct CentralFileHeaderRecord
 {
-  quint32 signature;
-  quint16 verMadeBy, verNeeded, gpBits, compressionMethod, fileTime, fileDate;
-  quint32 crc32, compressedSize, uncompressedSize;
-  quint16 fileNameLength, extraFieldLength, fileCommentLength, diskNumberStart,
-          intFileAttrs;
-  quint32 externalFileAttrs, offsetOfLocalHeader;
+    quint32 signature;
+    quint16 verMadeBy, verNeeded, gpBits, compressionMethod, fileTime, fileDate;
+    quint32 crc32, compressedSize, uncompressedSize;
+    quint16 fileNameLength, extraFieldLength, fileCommentLength, diskNumberStart,
+    intFileAttrs;
+    quint32 externalFileAttrs, offsetOfLocalHeader;
 } __attribute__((packed));
 
 struct LocalFileHeaderRecord
 {
-  quint32 signature;
-  quint16 verNeeded, gpBits, compressionMethod, fileTime, fileDate;
-  quint32 crc32, compressedSize, uncompressedSize;
-  quint16 fileNameLength, extraFieldLength;
+    quint32 signature;
+    quint16 verNeeded, gpBits, compressionMethod, fileTime, fileDate;
+    quint32 crc32, compressedSize, uncompressedSize;
+    quint16 fileNameLength, extraFieldLength;
 } __attribute__((packed));
 
 static quint32 const endOfCdirRecordSignatureValue = qToLittleEndian( 0x06054b50 );
@@ -40,133 +40,134 @@ static quint32 const localFileHeaderSignature = qToLittleEndian( 0x04034b50 );
 
 static CompressionMethod getCompressionMethod( quint16 compressionMethod )
 {
-  switch( qFromLittleEndian( compressionMethod ) )
-  {
-  case 0:
-    return Uncompressed;
-  case 8:
-    return Deflated;
-  default:
-    return Unsupported;
-  }
+    switch( qFromLittleEndian( compressionMethod ) )
+    {
+        case 0:
+            return Uncompressed;
+        case 8:
+            return Deflated;
+        default:
+            return Unsupported;
+    }
 }
 
 bool positionAtCentralDir( QFile & zip )
 {
-  // Find the end-of-central-directory record
+    // Find the end-of-central-directory record
 
-  int maxEofBufferSize = 65535 + sizeof( EndOfCdirRecord );
+    int maxEofBufferSize = 65535 + sizeof( EndOfCdirRecord );
 
-  if ( zip.size() > maxEofBufferSize )
-    zip.seek( zip.size() - maxEofBufferSize );
-  else
-  if ( zip.size() < sizeof( EndOfCdirRecord ) )
-    return false;
-  else
-    zip.seek( 0 );
+    if ( zip.size() > maxEofBufferSize )
+        zip.seek( zip.size() - maxEofBufferSize );
+    else {
+        if ( zip.size() < static_cast<qint64>(sizeof( EndOfCdirRecord )) )
+            return false;
 
-  QByteArray eocBuffer = zip.read( maxEofBufferSize );
+        zip.seek( 0 );
+    }
 
-  if ( eocBuffer.size() < (int)sizeof( EndOfCdirRecord ) )
-    return false;
+    QByteArray eocBuffer = zip.read( maxEofBufferSize );
 
-  int lastIndex = eocBuffer.size() - sizeof( EndOfCdirRecord );
+    if ( eocBuffer.size() < static_cast<int>(sizeof( EndOfCdirRecord )) )
+        return false;
 
-  QByteArray endOfCdirRecordSignature( (char const *)&endOfCdirRecordSignatureValue,
-                                       sizeof( endOfCdirRecordSignatureValue ) );
+    int lastIndex = eocBuffer.size() - sizeof( EndOfCdirRecord );
 
-  EndOfCdirRecord endOfCdirRecord;
+    QByteArray endOfCdirRecordSignature( (char const *)&endOfCdirRecordSignatureValue,
+                                         sizeof( endOfCdirRecordSignatureValue ) );
 
-  for( ; ; --lastIndex )
-  {
-    lastIndex = eocBuffer.lastIndexOf( endOfCdirRecordSignature, lastIndex );
+    EndOfCdirRecord endOfCdirRecord {};
 
-    if ( lastIndex == -1 )
-      return false;
+    for( ; ; --lastIndex )
+    {
+        lastIndex = eocBuffer.lastIndexOf( endOfCdirRecordSignature, lastIndex );
 
-    /// We need to copy it due to possible alignment issues on ARM etc
-    memcpy( &endOfCdirRecord, eocBuffer.data() + lastIndex,
-            sizeof( endOfCdirRecord ) );
+        if ( lastIndex == -1 )
+            return false;
 
-    /// Sanitize the record by checking the offset
+        /// We need to copy it due to possible alignment issues on ARM etc
+        memcpy( &endOfCdirRecord, eocBuffer.data() + lastIndex,
+                sizeof( endOfCdirRecord ) );
 
-    if ( !zip.seek( qFromLittleEndian( endOfCdirRecord.offset ) ) )
-      continue;
+        /// Sanitize the record by checking the offset
 
-    quint32 signature;
+        if ( !zip.seek( qFromLittleEndian( endOfCdirRecord.offset ) ) )
+            continue;
 
-    if ( zip.read( (char *)&signature, sizeof( signature ) ) != sizeof( signature ) )
-      continue;
+        quint32 signature;
 
-    if ( signature == centralFileHeaderSignature )
-      break;
-  }
+        if ( zip.read(reinterpret_cast<char *>(&signature), sizeof( signature ) ) != sizeof( signature ) )
+            continue;
 
-  // Found cdir -- position the file on the first header
+        if ( signature == centralFileHeaderSignature )
+            break;
+    }
 
-  return zip.seek( qFromLittleEndian( endOfCdirRecord.offset ) );
+    // Found cdir -- position the file on the first header
+
+    return zip.seek( qFromLittleEndian( endOfCdirRecord.offset ) );
 }
 
 bool readNextEntry( QFile & zip, CentralDirEntry & entry )
 {
-  CentralFileHeaderRecord record;
+    CentralFileHeaderRecord record {};
 
-  if ( zip.read( (char *)&record, sizeof( record ) ) != sizeof( record ) )
-    return false;
+    if ( zip.read( (char *)&record, sizeof( record ) ) != sizeof( record ) )
+        return false;
 
-  if ( record.signature != centralFileHeaderSignature )
-    return false;
+    if ( record.signature != centralFileHeaderSignature )
+        return false;
 
-  // Read file name
+    // Read file name
 
-  int fileNameLength = qFromLittleEndian( record.fileNameLength );
-  entry.fileName = zip.read( fileNameLength );
+    int fileNameLength = qFromLittleEndian( record.fileNameLength );
+    entry.fileName = zip.read( fileNameLength );
 
-  if ( entry.fileName.size() != fileNameLength )
-    return false;
+    if ( entry.fileName.size() != fileNameLength )
+        return false;
 
-  // Skip extra fields
+    // Skip extra fields
 
-  if ( !zip.seek( ( zip.pos() + qFromLittleEndian( record.extraFieldLength ) ) +
-                  qFromLittleEndian( record.fileCommentLength ) ) )
-    return false;
+    if ( !zip.seek( ( zip.pos() + qFromLittleEndian( record.extraFieldLength ) ) +
+                    qFromLittleEndian( record.fileCommentLength ) ) )
+        return false;
 
-  entry.localHeaderOffset = qFromLittleEndian( record.offsetOfLocalHeader );
-  entry.compressedSize = qFromLittleEndian( record.compressedSize );
-  entry.uncompressedSize = qFromLittleEndian( record.uncompressedSize );
-  entry.compressionMethod = getCompressionMethod( record.compressionMethod );
+    entry.localHeaderOffset = qFromLittleEndian( record.offsetOfLocalHeader );
+    entry.compressedSize = qFromLittleEndian( record.compressedSize );
+    entry.uncompressedSize = qFromLittleEndian( record.uncompressedSize );
+    entry.compressionMethod = getCompressionMethod( record.compressionMethod );
 
-  return true;
+    return true;
 }
 
 bool readLocalHeader( QFile & zip, LocalFileHeader & entry )
 {
-  LocalFileHeaderRecord record;
+    LocalFileHeaderRecord record {};
 
-  if ( zip.read( (char *)&record, sizeof( record ) ) != sizeof( record ) )
-    return false;
+    if ( zip.read( (char *)&record, sizeof( record ) ) != sizeof( record ) )
+        return false;
 
-  if ( record.signature != localFileHeaderSignature )
-    return false;
+    if ( record.signature != localFileHeaderSignature )
+        return false;
 
-  // Read file name
+    // Read file name
 
-  int fileNameLength = qFromLittleEndian( record.fileNameLength );
-  entry.fileName = zip.read( fileNameLength );
+    int fileNameLength = qFromLittleEndian( record.fileNameLength );
+    entry.fileName = zip.read( fileNameLength );
 
-  if ( entry.fileName.size() != fileNameLength )
-    return false;
+    if ( entry.fileName.size() != fileNameLength )
+        return false;
 
-  // Skip extra field
+    // Skip extra field
 
-  if ( !zip.seek( zip.pos() + qFromLittleEndian( record.extraFieldLength ) ) )
-    return false;
+    if ( !zip.seek( zip.pos() + qFromLittleEndian( record.extraFieldLength ) ) )
+        return false;
 
-  entry.compressedSize = qFromLittleEndian( record.compressedSize );
-  entry.uncompressedSize = qFromLittleEndian( record.uncompressedSize );
-  entry.compressionMethod = getCompressionMethod( record.compressionMethod );
+    entry.compressedSize = qFromLittleEndian( record.compressedSize );
+    entry.uncompressedSize = qFromLittleEndian( record.uncompressedSize );
+    entry.compressionMethod = getCompressionMethod( record.compressionMethod );
 
-  return true;
+    return true;
 }
 
 }

@@ -80,15 +80,15 @@ private:
   bool escaped;
   unsigned transcriptionCount; // >0 = inside a [t] tag
 
-  void nextChar() throw( eot );
+  void nextChar();
 };
 
 /// A adapted version of Iconv which takes Dsl encoding and decodes to wchar.
 class DslIconv: public Iconv
 {
 public:
-  DslIconv( DslEncoding ) throw( Iconv::Ex );
-  void reinit( DslEncoding ) throw( Iconv::Ex );
+  DslIconv( DslEncoding );
+  void reinit( DslEncoding );
 
   /// Returns a name to be passed to iconv for the given dsl encoding.
   static char const * getEncodingNameFor( DslEncoding );
@@ -118,8 +118,8 @@ public:
   DEF_EX( exUnknownCodePage, "The .dsl file specified an unknown code page", Ex )
   DEF_EX( exEncodingError, "Encoding error", Ex ) // Should never happen really
 
-  DslScanner( string const & fileName ) throw( Ex, Iconv::Ex );
-  ~DslScanner() throw();
+  DslScanner( string const & fileName );
+  ~DslScanner();
 
   /// Returns the detected encoding of this file.
   DslEncoding getEncoding() const
@@ -143,7 +143,7 @@ public:
   /// If end of file is reached, false is returned.
   /// Reading begins from the first line after the headers (ones which start
   /// with #).
-  bool readNextLine( wstring &, size_t & offset ) throw( Ex, Iconv::Ex );
+  bool readNextLine( wstring &, size_t & offset );
 
   /// Returns the number of lines read so far from the file.
   unsigned getLinesRead() const

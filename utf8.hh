@@ -31,7 +31,12 @@ size_t encode( wchar const * in, size_t inSize, char * out );
 long decode( char const * in, size_t inSize, wchar * out );
 
 /// Versions for non time-critical code.
-string encode( wstring const & ) throw();
-wstring decode( string const & ) throw( exCantDecode );
+string encode( wstring const & );
+wstring decode( string const & );
+
+/// Since the standard isspace() is locale-specific, we need something
+/// that would never mess up our utf8 input. The stock one worked fine under
+/// Linux but was messing up strings under Windows.
+bool isspace( int c );
 
 }

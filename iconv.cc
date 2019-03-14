@@ -3,8 +3,8 @@
 
 #include "iconv.hh"
 #include <vector>
-#include <errno.h>
-#include <string.h>
+#include <cerrno>
+#include <cstring>
 
 #ifdef __WIN32
 char const * const Iconv::GdWchar = "UCS-4LE";
@@ -17,14 +17,14 @@ char const * const Iconv::Utf8 = "UTF-8";
 
 using gd::wchar;
 
-Iconv::Iconv( char const * to, char const * from ) throw( exCantInit ):
+Iconv::Iconv( char const * to, char const * from ):
   state( iconv_open( to, from ) )
 {
   if ( state == (iconv_t) -1 )
     throw exCantInit( strerror( errno ) );
 }
 
-void Iconv::reinit( char const * to, char const * from ) throw( exCantInit )
+void Iconv::reinit( char const * to, char const * from )
 {
   iconv_close( state );
 
@@ -34,21 +34,16 @@ void Iconv::reinit( char const * to, char const * from ) throw( exCantInit )
     throw exCantInit( strerror( errno ) );
 }
 
-Iconv::~Iconv() throw()
+Iconv::~Iconv()
 {
   iconv_close( state );
 }
 
 Iconv::Result Iconv::convert( void const * & inBuf, size_t  & inBytesLeft,
                               void * & outBuf, size_t & outBytesLeft )
-  throw( exIncorrectSeq, exOther )
 {
   size_t result = iconv( state,
-                         #ifdef __WIN32
-                         (char const **)&inBuf,
-                         #else
                          (char **)&inBuf,
-                         #endif
                                            &inBytesLeft,
                          (char **)&outBuf, &outBytesLeft );
 
@@ -72,7 +67,6 @@ Iconv::Result Iconv::convert( void const * & inBuf, size_t  & inBytesLeft,
 
 gd::wstring Iconv::toWstring( char const * fromEncoding, void const * fromData,
                               size_t dataSize )
-  throw( exCantInit, exIncorrectSeq, exPrematureEnd, exOther )
 {
   /// Special-case the dataSize == 0 to avoid any kind of iconv-specific
   /// behaviour in that regard.
@@ -113,7 +107,6 @@ gd::wstring Iconv::toWstring( char const * fromEncoding, void const * fromData,
 
 std::string Iconv::toUtf8( char const * fromEncoding, void const * fromData,
                            size_t dataSize )
-  throw( exCantInit, exIncorrectSeq, exPrematureEnd, exOther )
 {
   // Similar to toWstring
 

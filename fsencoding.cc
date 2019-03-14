@@ -11,42 +11,52 @@ namespace FsEncoding {
 
 string encode( wstring const & str )
 {
-  return string( gd::toQString( str ).toLocal8Bit().data() );
+    return string( gd::toQString( str ).toLocal8Bit().constData() );
 }
 
 string encode( string const & str )
 {
-  return string( QString::fromUtf8( str.c_str() ).toLocal8Bit().data() );
+    return string( QString::fromUtf8( str.c_str() ).toLocal8Bit().constData() );
+}
+
+string encode( QString const & str )
+{
+    return string( str.toLocal8Bit().constData() );
 }
 
 wstring decode( string const & str )
 {
-  return gd::toWString( QString::fromLocal8Bit( str.c_str() ) );
+    return gd::toWString( QString::fromLocal8Bit( str.c_str() ) );
+}
+
+QString decode( const char *str )
+{
+    return QString::fromLocal8Bit( str );
 }
 
 char separator()
 {
-  return QDir::separator().toLatin1();
+    return QDir::separator().toLatin1();
 }
 
 string dirname( string const & str )
 {
-  size_t x = str.rfind( separator() );
+    size_t x = str.rfind( separator() );
 
-  if ( x == string::npos )
-    return string( "." );
+    if ( x == string::npos )
+        return string( "." );
 
-  return string( str, 0, x );
+    return string( str, 0, x );
 }
 
 string basename( string const & str )
 {
-  size_t x = str.rfind( separator() );
+    size_t x = str.rfind( separator() );
 
-  if ( x == string::npos )
-    return str;
+    if ( x == string::npos )
+        return str;
 
-  return string( str, x + 1 );
+    return string( str, x + 1 );
 }
 
 }

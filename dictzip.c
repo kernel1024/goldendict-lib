@@ -172,7 +172,6 @@ static void err_fatal( const char *routine, const char *format, ... )
    
    fflush( stderr );
    fflush( stdout );
-   exit ( 1 );
 }
 
 /* \doc |err_fatal_errno| flushes "stdout", prints a fatal error report on
@@ -211,7 +210,6 @@ static void err_fatal_errno( const char *routine, const char *format, ... )
    
    fflush( stderr );
    fflush( stdout );
-   exit( 1 );
 }
 
 /* \doc |err_internal| flushes "stdout", prints the fatal error message,
@@ -245,7 +243,6 @@ static void err_internal( const char *routine, const char *format, ... )
      fprintf( stderr, "Aborting...\n" );
   fflush( stderr );
   fflush( stdout );
-  abort();
 }
 
 #ifndef __func__
@@ -325,9 +322,13 @@ static int dict_read_header( const char *filename,
 	 header->version     |= getc( str ) << 8;
 	 
 	 if (header->version != 1)
+     {
 	    err_internal( __func__,
 			  "dzip header version %d not supported\n",
 			  header->version );
+        fclose( str );
+        return 6;
+     }
    
 	 header->chunkLength  = getc( str ) << 0;
 	 header->chunkLength |= getc( str ) << 8;
@@ -340,6 +341,10 @@ static int dict_read_header( const char *filename,
 	 }
 	 header->chunks = xmalloc( sizeof( header->chunks[0] )
 				   * header->chunkCount );
+     if( header->chunks == 0 ) {
+         return 7;
+     }
+
 	 for (i = 0; i < header->chunkCount; i++) {
 	    header->chunks[i]  = getc( str ) << 0;
 	    header->chunks[i] |= getc( str ) << 8;
@@ -359,6 +364,10 @@ static int dict_read_header( const char *filename,
 	    err_fatal (
 	       __func__,
 	       "too long FNAME field in dzip file \"%s\"\n", filename);
+        fclose( str );
+        if( header->chunks )
+            free( header->chunks );
+        return 8;
 	 }
       }
 
@@ -378,12 +387,16 @@ static int dict_read_header( const char *filename,
 	    err_fatal (
 	       __func__,
 	       "too long COMMENT field in dzip file \"%s\"\n", filename);
-	 }
+        fclose( str );
+        if( header->chunks )
+            free( header->chunks );
+        return 9;
+     }
       }
 
       *pt = '\0';
       header->comment = NULL;//str_find( buffer );
-      header->headerLength += strlen( header->comment ) + 1;
+      header->headerLength += strlen( buffer ) + 1;
    } else {
       header->comment = NULL;
    }
@@ -395,9 +408,15 @@ static int dict_read_header( const char *filename,
    }
 
    if (ftell( str ) != header->headerLength + 1)
+   {
       err_internal( __func__,
 		    "File position (%lu) != header length + 1 (%d)\n",
 		    ftell( str ), header->headerLength + 1 );
+      fclose( str );
+      if( header->chunks )
+          free( header->chunks );
+      return 10;
+   }
 
    fseek( str, -8, SEEK_END );
    header->crc     = getc( str ) <<  0;
@@ -413,6 +432,13 @@ static int dict_read_header( const char *filename,
 				/* Compute offsets */
    header->offsets = xmalloc( sizeof( header->offsets[0] )
 			      * header->chunkCount );
+   if( header->offsets == 0 ) {
+       fclose( str );
+       if( header->chunks )
+           free( header->chunks );
+       return 11;
+   }
+
    for (offset = header->headerLength + 1, i = 0;
 	i < header->chunkCount;
 	i++)
@@ -434,6 +460,8 @@ dictData *dict_data_open( const char *filename, int computeCRC )
       return NULL;
 
    h = xmalloc( sizeof( struct dictData ) );
+   if( h == 0 )
+       return NULL;
 
    memset( h, 0, sizeof( struct dictData ) );
    h->initialized = 0;

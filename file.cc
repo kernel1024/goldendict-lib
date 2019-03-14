@@ -14,271 +14,266 @@ namespace File {
 
 enum
 {
-  // We employ a writing buffer to considerably speed up file operations when
-  // they consists of many small writes. The default size for the buffer is 64k
-  WriteBufferSize = 65536
+    // We employ a writing buffer to considerably speed up file operations when
+    // they consists of many small writes. The default size for the buffer is 64k
+    WriteBufferSize = 65536
 };
 
-bool exists( char const * filename ) throw()
+bool exists( char const * filename )
 {
-#ifdef __WIN32
-  struct _stat buf;
-  return _stat( filename, &buf ) == 0;
-#else
-  struct stat buf;
+    struct stat buf {};
 
-  // EOVERFLOW rationale: if the file is too large, it still does exist
-  return stat( filename, &buf ) == 0 || errno == EOVERFLOW;
-#endif
+    // EOVERFLOW rationale: if the file is too large, it still does exist
+    return stat( filename, &buf ) == 0 || errno == EOVERFLOW;
 }
 
-void Class::open( char const * filename, char const * mode ) throw( exCantOpen )
+void Class::open( char const * filename, char const * mode )
 {
-  f = fopen( filename, mode );
+    f = fopen( filename, mode );
 
-  if ( !f )
-    throw exCantOpen( std::string( filename ) + ": " + strerror( errno ) );
+    if ( !f )
+        throw exCantOpen( std::string( filename ) + ": " + strerror( errno ) );
 }
 
-Class::Class( char const * filename, char const * mode ) throw( exCantOpen ):
-  writeBuffer( 0 )
+Class::Class( char const * filename, char const * mode ):
+    f( nullptr ), writeBuffer( nullptr ), writeBufferLeft( 0 )
 {
-  open( filename, mode );
+    open( filename, mode );
 }
 
-Class::Class( std::string const & filename, char const * mode )
-  throw( exCantOpen ): writeBuffer( 0 )
+Class::Class( std::string const & filename, char const * mode ):
+    f( nullptr ), writeBuffer( nullptr ), writeBufferLeft( 0 )
 {
-  open( filename.c_str(), mode );
+    open( filename.c_str(), mode );
 }
 
-void Class::read( void * buf, size_t size ) throw( exReadError, exWriteError )
+void Class::read( void * buf, size_t size )
 {
-  if ( !size )
-    return;
+    if ( !size )
+        return;
 
-  if ( writeBuffer )
-    flushWriteBuffer();
+    if ( writeBuffer )
+        flushWriteBuffer();
 
-  size_t result = fread( buf, size, 1, f );
-
-  if ( result != 1 )
-    throw exReadError();
-}
-
-size_t Class::readRecords( void * buf, size_t size, size_t count ) throw( exWriteError )
-{
-  if ( writeBuffer )
-    flushWriteBuffer();
-
-  return fread( buf, size, count, f );
-}
-
-void Class::write( void const * buf, size_t size ) throw( exWriteError )
-{
-  if ( !size )
-    return;
-
-  if ( size >= WriteBufferSize )
-  {
-    // If the write is large, there's not much point in buffering
-    flushWriteBuffer();
-
-    size_t result = fwrite( buf, size, 1, f );
+    size_t result = fread( buf, size, 1, f );
 
     if ( result != 1 )
-      throw exWriteError();
+        throw exReadError();
+}
 
-    return;
-  }
+size_t Class::readRecords( void * buf, size_t size, size_t count )
+{
+    if ( writeBuffer )
+        flushWriteBuffer();
 
-  if ( !writeBuffer )
-  {
-    // Allocate the writing buffer since we don't have any yet
-    writeBuffer = new char[ WriteBufferSize ];
-    writeBufferLeft = WriteBufferSize;
-  }
+    return fread( buf, size, count, f );
+}
 
-  size_t toAdd = size < writeBufferLeft ? size : writeBufferLeft;
+void Class::write( void const * buf, size_t size )
+{
+    if ( !size )
+        return;
 
-  memcpy( writeBuffer + ( WriteBufferSize - writeBufferLeft ),
-          buf, toAdd );
-
-  size -= toAdd;
-  writeBufferLeft -= toAdd;
-
-  if ( !writeBufferLeft ) // Out of buffer? Flush it.
-  {
-    flushWriteBuffer();
-
-    if ( size ) // Something's still left? Add to buffer.
+    if ( size >= WriteBufferSize )
     {
-      memcpy( writeBuffer, (char const *)buf + toAdd, size );
-      writeBufferLeft -= size;
+        // If the write is large, there's not much point in buffering
+        flushWriteBuffer();
+
+        size_t result = fwrite( buf, size, 1, f );
+
+        if ( result != 1 )
+            throw exWriteError();
+
+        return;
     }
-  }
+
+    if ( !writeBuffer )
+    {
+        // Allocate the writing buffer since we don't have any yet
+        writeBuffer = new char[ WriteBufferSize ];
+        writeBufferLeft = WriteBufferSize;
+    }
+
+    size_t toAdd = size < writeBufferLeft ? size : writeBufferLeft;
+
+    memcpy( writeBuffer + ( WriteBufferSize - writeBufferLeft ),
+            buf, toAdd );
+
+    size -= toAdd;
+    writeBufferLeft -= toAdd;
+
+    if ( !writeBufferLeft ) // Out of buffer? Flush it.
+    {
+        flushWriteBuffer();
+
+        if ( size ) // Something's still left? Add to buffer.
+        {
+            memcpy( writeBuffer, (char const *)buf + toAdd, size );
+            writeBufferLeft -= size;
+        }
+    }
 }
 
 size_t Class::writeRecords( void const * buf, size_t size, size_t count )
-  throw( exWriteError )
-{
-  flushWriteBuffer();
 
-  return fwrite( buf, size, count, f );
+{
+    flushWriteBuffer();
+
+    return fwrite( buf, size, count, f );
 }
 
 char * Class::gets( char * s, int size, bool stripNl )
-  throw( exWriteError )
+
 {
-  if ( writeBuffer )
-    flushWriteBuffer();
+    if ( writeBuffer )
+        flushWriteBuffer();
 
-  char * result = fgets( s, size, f );
+    char * result = fgets( s, size, f );
 
-  if ( result && stripNl )
-  {
-    size_t len = strlen( result );
-    
-    char * last = result + len;
-
-    while( len-- )
+    if ( result && stripNl )
     {
-      --last;
+        size_t len = strlen( result );
 
-      if ( *last == '\n' || *last == '\r' )
-        *last = 0;
-      else
-        break;
+        char * last = result + len;
+
+        while( len-- )
+        {
+            --last;
+
+            if ( *last == '\n' || *last == '\r' )
+                *last = 0;
+            else
+                break;
+        }
     }
-  }
 
-  return result;
+    return result;
 }
 
-std::string Class::gets( bool stripNl ) throw( exReadError, exWriteError )
+std::string Class::gets( bool stripNl )
 {
-  char buf[ 1024 ];
+    char buf[ 1024 ];
 
-  if ( !gets( buf, sizeof( buf ), stripNl ) )
-    throw exReadError();
+    if ( !gets( buf, sizeof( buf ), stripNl ) )
+        throw exReadError();
 
-  return std::string( buf );
+    return std::string( buf );
 }
 
-void Class::seek( long offset ) throw( exSeekError, exWriteError )
+void Class::seek( long offset )
 {
-  if ( writeBuffer )
+    if ( writeBuffer )
+        flushWriteBuffer();
+
+    if ( fseek( f, offset, SEEK_SET ) != 0 )
+        throw exSeekError();
+}
+
+void Class::seekCur( long offset )
+{
+    if ( writeBuffer )
+        flushWriteBuffer();
+
+    if ( fseek( f, offset, SEEK_CUR ) != 0 )
+        throw exSeekError();
+}
+
+void Class::seekEnd( long offset )
+{
+    if ( writeBuffer )
+        flushWriteBuffer();
+
+    if ( fseek( f, offset, SEEK_END ) != 0 )
+        throw exSeekError();
+}
+
+void Class::rewind()
+{
+    seek( 0 );
+}
+
+size_t Class::tell()
+{
+    long result = ftell( f );
+
+    if ( result == -1 )
+        throw exSeekError();
+
+    if ( writeBuffer )
+        result += ( WriteBufferSize - writeBufferLeft );
+
+    return ( size_t ) result;
+}
+
+bool Class::eof()
+{
+    if ( writeBuffer )
+        flushWriteBuffer();
+
+    return feof( f );
+}
+
+FILE * Class::file()
+{
     flushWriteBuffer();
 
-  if ( fseek( f, offset, SEEK_SET ) != 0 )
-    throw exSeekError();
+    return f;
 }
 
-void Class::seekCur( long offset ) throw( exSeekError, exWriteError )
+FILE * Class::release()
 {
-  if ( writeBuffer )
-    flushWriteBuffer();
+    releaseWriteBuffer();
 
-  if ( fseek( f, offset, SEEK_CUR ) != 0 )
-    throw exSeekError();
+    FILE * c = f;
+
+    f = nullptr;
+
+    return c;
 }
 
-void Class::seekEnd( long offset ) throw( exSeekError, exWriteError )
+void Class::close()
 {
-  if ( writeBuffer )
-    flushWriteBuffer();
-
-  if ( fseek( f, offset, SEEK_END ) != 0 )
-    throw exSeekError();
+    fclose( release() );
 }
 
-void Class::rewind() throw( exSeekError, exWriteError )
+Class::~Class()
 {
-  seek( 0 );
-}
-
-size_t Class::tell() throw( exSeekError )
-{
-  long result = ftell( f );
-
-  if ( result == -1 )
-    throw exSeekError();
-
-  if ( writeBuffer )
-    result += ( WriteBufferSize - writeBufferLeft );
-
-  return ( size_t ) result;
-}
-
-bool Class::eof() throw( exWriteError )
-{
-  if ( writeBuffer )
-    flushWriteBuffer();
-
-  return feof( f );
-}
-
-FILE * Class::file() throw( exWriteError )
-{
-  flushWriteBuffer();
-
-  return f;
-}
-
-FILE * Class::release() throw( exWriteError )
-{
-  releaseWriteBuffer();
-
-  FILE * c = f;
-
-  f = 0;
-
-  return c;
-}
-
-void Class::close() throw( exWriteError )
-{
-  fclose( release() );
-}
-
-Class::~Class() throw()
-{
-  if ( f )
-  {
-    try
+    if ( f )
     {
-      releaseWriteBuffer();
+        try
+        {
+            releaseWriteBuffer();
+        }
+        catch( exWriteError & )
+        {
+        }
+        fclose( f );
     }
-    catch( exWriteError & )
+}
+
+void Class::flushWriteBuffer()
+{
+    if ( writeBuffer && writeBufferLeft != WriteBufferSize )
     {
+        size_t result = fwrite( writeBuffer, WriteBufferSize - writeBufferLeft, 1, f );
+
+        if ( result != 1 )
+            throw exWriteError();
+
+        writeBufferLeft = WriteBufferSize;
     }
-    fclose( f );
-  }
 }
 
-void Class::flushWriteBuffer() throw( exWriteError )
+void Class::releaseWriteBuffer()
 {
-  if ( writeBuffer && writeBufferLeft != WriteBufferSize )
-  {
-    size_t result = fwrite( writeBuffer, WriteBufferSize - writeBufferLeft, 1, f );
+    flushWriteBuffer();
 
-    if ( result != 1 )
-      throw exWriteError();
+    if ( writeBuffer )
+    {
+        delete [] writeBuffer;
 
-    writeBufferLeft = WriteBufferSize;
-  }
-}
-
-void Class::releaseWriteBuffer() throw( exWriteError )
-{
-  flushWriteBuffer();
-
-  if ( writeBuffer )
-  {
-    delete [] writeBuffer;
-
-    writeBuffer = 0;
-  }
+        writeBuffer = nullptr;
+    }
 }
 
 

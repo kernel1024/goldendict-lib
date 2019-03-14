@@ -6,7 +6,6 @@
 #include <QList>
 #include <QMap>
 #include <QPair>
-#include <QWidget>
 #include <QNetworkCookie>
 #include <QNetworkAccessManager>
 #include <QUrl>
@@ -48,7 +47,7 @@ signals:
     void indexingDictionarySignal( QString const & dictionaryName );
 
 public:
-    virtual void indexingDictionary( std::string const & dictionaryName ) throw();
+    virtual void indexingDictionary( std::string const & dictionaryName );
 
 private:
     void handlePath( const QString& path, bool recursive );
@@ -56,70 +55,70 @@ private:
 
 class GOLDENDICT_SHARED_EXPORT ArticleRequest: public Dictionary::DataRequest
 {
-  Q_OBJECT
+    Q_OBJECT
 
-  QString word, group;
-  QMap< QString, QString > contexts;
-  std::vector< sptr< Dictionary::Class > > activeDicts;
+    QString word, group;
+    QMap< QString, QString > contexts;
+    std::vector< sptr< Dictionary::Class > > activeDicts;
 
-  std::set< gd::wstring > alts; // Accumulated main forms
-  std::list< sptr< Dictionary::WordSearchRequest > > altSearches;
-  bool altsDone, bodyDone;
-  std::list< sptr< Dictionary::DataRequest > > bodyRequests;
-  bool foundAnyDefinitions;
-  bool closePrevSpan; // Indicates whether the last opened article span is to
-                      // be closed after the article ends.
-  sptr< WordFinder > stemmedWordFinder; // Used when there're no results
+    std::set< gd::wstring > alts; // Accumulated main forms
+    std::list< sptr< Dictionary::WordSearchRequest > > altSearches;
+    bool altsDone, bodyDone;
+    std::list< sptr< Dictionary::DataRequest > > bodyRequests;
+    bool foundAnyDefinitions;
+    bool closePrevSpan; // Indicates whether the last opened article span is to
+    // be closed after the article ends.
+    sptr< WordFinder > stemmedWordFinder; // Used when there're no results
 
-  /// A sequence of words and spacings between them, including the initial
-  /// spacing before the first word and the final spacing after the last word.
-  typedef QList< QString > Words;
-  typedef QList< QString > Spacings;
+    /// A sequence of words and spacings between them, including the initial
+    /// spacing before the first word and the final spacing after the last word.
+    typedef QList< QString > Words;
+    typedef QList< QString > Spacings;
 
-  /// Splits the given string into words and spacings between them.
-  QPair< Words, Spacings > splitIntoWords( QString const & );
+    /// Splits the given string into words and spacings between them.
+    QPair< Words, Spacings > splitIntoWords( QString const & );
 
-  QPair< Words, Spacings > splittedWords;
-  int currentSplittedWordStart;
-  int currentSplittedWordEnd;
-  QString currentSplittedWordCompound;
-  QString lastGoodCompoundResult;
-  bool firstCompoundWasFound;
+    QPair< Words, Spacings > splittedWords;
+    int currentSplittedWordStart;
+    int currentSplittedWordEnd;
+    QString currentSplittedWordCompound;
+    QString lastGoodCompoundResult;
+    bool firstCompoundWasFound;
 
 public:
 
-  ArticleRequest( QString const & word, QString const & group,
-                  QMap< QString, QString > const & contexts,
-                  std::vector< sptr< Dictionary::Class > > const & activeDicts,
-                  std::string const & header );
+    ArticleRequest( QString const & word, QString const & group,
+                    QMap< QString, QString > const & contexts,
+                    std::vector< sptr< Dictionary::Class > > const & activeDicts,
+                    std::string const & header );
 
-  virtual void cancel()
-  { finish(); } // Add our own requests cancellation here
+    virtual void cancel()
+    { finish(); } // Add our own requests cancellation here
 
 private slots:
 
-  void altSearchFinished();
-  void bodyFinished();
-  void stemmedSearchFinished();
-  void individualWordFinished();
+    void altSearchFinished();
+    void bodyFinished();
+    void stemmedSearchFinished();
+    void individualWordFinished();
 
 private:
 
-  /// Appends the given string to 'data', with locking its mutex.
-  void appendToData( std::string const & );
+    /// Appends the given string to 'data', with locking its mutex.
+    void appendToData( std::string const & );
 
-  /// Uses stemmedWordFinder to perform the next step of looking up word
-  /// combinations.
-  void compoundSearchNextStep( bool lastSearchSucceeded );
+    /// Uses stemmedWordFinder to perform the next step of looking up word
+    /// combinations.
+    void compoundSearchNextStep( bool lastSearchSucceeded );
 
-  /// Creates a single word out of the [currentSplittedWordStart..End] range.
-  QString makeSplittedWordCompound();
+    /// Creates a single word out of the [currentSplittedWordStart..End] range.
+    QString makeSplittedWordCompound();
 
-  /// Makes an html link to the given word.
-  std::string linkWord( QString const & );
+    /// Makes an html link to the given word.
+    std::string linkWord( QString const & );
 
-  /// Escapes the spacing between the words to include in html.
-  std::string escapeSpacing( QString const & );
+    /// Escapes the spacing between the words to include in html.
+    std::string escapeSpacing( QString const & );
 };
 
 class GOLDENDICT_SHARED_EXPORT CGoldenDictMgr : public QObject
@@ -161,98 +160,99 @@ public slots:
 
 class GOLDENDICT_SHARED_EXPORT ArticleNetworkAccessManager: public QNetworkAccessManager
 {
-  CGoldenDictMgr * dictMgr;
+    CGoldenDictMgr * dictMgr;
 
 public:
 
-  ArticleNetworkAccessManager( QObject * parent,
-                               CGoldenDictMgr * dictMgr_):
-    QNetworkAccessManager( parent ),
-    dictMgr( dictMgr_ )
-  {}
+    ArticleNetworkAccessManager( QObject * parent,
+                                 CGoldenDictMgr * dictMgr_):
+        QNetworkAccessManager( parent ),
+        dictMgr( dictMgr_ )
+    {}
 
-  /// Tries handling any kind of internal resources referenced by dictionaries.
-  /// If it succeeds, the result is a dictionary request object. Otherwise, an
-  /// empty pointer is returned.
-  /// The function can optionally set the Content-Type header correspondingly.
-  sptr< Dictionary::DataRequest > getResource( QUrl const & url,
-                                               QString & contentType );
+    /// Tries handling any kind of internal resources referenced by dictionaries.
+    /// If it succeeds, the result is a dictionary request object. Otherwise, an
+    /// empty pointer is returned.
+    /// The function can optionally set the Content-Type header correspondingly.
+    sptr< Dictionary::DataRequest > getResource( QUrl const & url,
+                                                 QString & contentType );
 
 protected:
 
-  virtual QNetworkReply * createRequest( Operation op,
-                                         QNetworkRequest const & req,
-                                         QIODevice * outgoingData );
+    virtual QNetworkReply * createRequest( Operation op,
+                                           QNetworkRequest const & req,
+                                           QIODevice * outgoingData );
 };
 
 class GOLDENDICT_SHARED_EXPORT ArticleResourceReply: public QNetworkReply
 {
-  Q_OBJECT
+    Q_OBJECT
 
-  sptr< Dictionary::DataRequest > req;
-  size_t alreadyRead;
+    sptr< Dictionary::DataRequest > req;
+    size_t alreadyRead;
 
 public:
 
-  ArticleResourceReply( QObject * parent,
-                        QNetworkRequest const &,
-                        sptr< Dictionary::DataRequest > const &,
-                        QString const & contentType );
+    ArticleResourceReply( QObject * parent,
+                          QNetworkRequest const &,
+                          sptr< Dictionary::DataRequest > const &,
+                          QString const & contentType );
 
-  ~ArticleResourceReply();
+    ~ArticleResourceReply() override;
 
 protected:
 
-  virtual qint64 bytesAvailable() const;
+    qint64 bytesAvailable() const override;
 
-  virtual void abort()
-  {}
-  virtual qint64 readData( char * data, qint64 maxSize );
+    void abort() override
+    {}
+    qint64 readData( char * data, qint64 maxSize ) override;
 
-  // We use the hackery below to work around the fact that we need to emit
-  // ready/finish signals after we've been constructed.
+    // We use the hackery below to work around the fact that we need to emit
+    // ready/finish signals after we've been constructed.
 signals:
 
-  void readyReadSignal();
-  void finishedSignal();
+    void readyReadSignal();
+    void finishedSignal();
 
 private slots:
 
-  void reqUpdated();
-  void reqFinished();
+    void reqUpdated();
+    void reqFinished();
 
-  void readyReadSlot();
-  void finishedSlot();
+    void readyReadSlot();
+    void finishedSlot();
 };
 
 class GOLDENDICT_SHARED_EXPORT BlockedNetworkReply: public QNetworkReply
 {
-  Q_OBJECT
+    Q_OBJECT
 
 public:
 
-  BlockedNetworkReply( QObject * parent );
+    BlockedNetworkReply( QObject * parent );
+    ~BlockedNetworkReply() override = default;
 
-  virtual qint64 readData( char *, qint64 )
-  {
-    return -1;
-  }
+    qint64 readData( char *, qint64 ) override
+    {
+        return -1;
+    }
 
-  virtual void abort()
-  {}
+    void abort() override
+    {}
 
 protected:
 
-  // We use the hackery below to work around the fact that we need to emit
-  // ready/finish signals after we've been constructed.
+    // We use the hackery below to work around the fact that we need to emit
+    // ready/finish signals after we've been constructed.
 
 signals:
 
-  void finishedSignal();
+    void finishedSignal();
 
 private slots:
 
-  void finishedSlot();
+    void finishedSlot();
 };
 
 

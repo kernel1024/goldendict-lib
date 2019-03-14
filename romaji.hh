@@ -11,8 +11,7 @@ namespace Romaji {
 
 using std::vector;
 
-vector< sptr< Dictionary::Class > > makeDictionaries()
-  throw( std::exception );
+vector< sptr< Dictionary::Class > > makeDictionaries();
 
 }
 

@@ -140,20 +140,18 @@ public:
   BtreeDictionary( string const & id, vector< string > const & dictionaryFiles );
 
   /// Btree-indexed dictionaries are usually a good source for compound searches.
-  virtual Dictionary::Features getFeatures() const throw()
+  virtual Dictionary::Features getFeatures() const
   { return Dictionary::SuitableForCompoundSearching; }
 
   /// This function does the search using the btree index. Derivatives
   /// need not to implement this function.
   virtual sptr< Dictionary::WordSearchRequest > prefixMatch( wstring const &,
-                                                             unsigned long )
-    throw( std::exception );
+                                                             unsigned long );
 
   virtual sptr< Dictionary::WordSearchRequest > stemmedMatch( wstring const &,
                                                               unsigned minLength,
                                                               unsigned maxSuffixVariation,
-                                                              unsigned long maxResults )
-    throw( std::exception );
+                                                              unsigned long maxResults );
 
 protected:
 

@@ -37,41 +37,34 @@ protected:
 class TransliterationDictionary: public Dictionary::Class
 {
   string name;
-  QIcon icon;
   Table const & table;
   bool caseSensitive;
   
 public:
 
   TransliterationDictionary( string const & id, string const & name,
-                             QIcon icon,
                              Table const & table,
                              bool caseSensitive = true );
 
-  virtual string getName() throw();
+  virtual string getName();
 
-  virtual QIcon getIcon() throw()
-  { return icon; }
-
-  virtual map< Dictionary::Property, string > getProperties() throw();
+  virtual map< Dictionary::Property, string > getProperties();
   
-  virtual unsigned long getArticleCount() throw();
+  virtual unsigned long getArticleCount();
 
-  virtual unsigned long getWordCount() throw();
+  virtual unsigned long getWordCount();
   
   virtual vector< wstring > getAlternateWritings( wstring const & )
-    throw();
+   ;
 
-  virtual sptr< Dictionary::WordSearchRequest > findHeadwordsForSynonym( wstring const & )
-    throw( std::exception );
+  virtual sptr< Dictionary::WordSearchRequest > findHeadwordsForSynonym( wstring const & );
   
   virtual sptr< Dictionary::WordSearchRequest > prefixMatch( wstring const &,
-                                                             unsigned long ) throw( std::exception );
+                                                             unsigned long );
   
   virtual sptr< Dictionary::DataRequest > getArticle( wstring const &,
                                                       vector< wstring > const &,
-                                                      wstring const & )
-    throw( std::exception );
+                                                      wstring const & );
 };
 
 }

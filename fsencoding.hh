@@ -4,6 +4,7 @@
 #ifndef __FSENCODING_HH_INCLUDED__
 #define __FSENCODING_HH_INCLUDED__
 
+#include <QString>
 #include "wstring.hh"
 
 /// Utilities to convert a wide string or an utf8 string to the local 8bit
@@ -19,9 +20,11 @@ string encode( wstring const & );
 
 /// Encodes the given string in utf8 to the system 8bit encoding.
 string encode( string const & );
+string encode( QString const & str );
 
 /// Decodes the given 8bit-encoded string to a wide string.
 wstring decode( string const & str );
+QString decode( const char *str );
 
 /// Returns the filesystem separator (/ on Unix and clones, \ on Windows).
 char separator();

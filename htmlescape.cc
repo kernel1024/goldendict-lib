@@ -56,7 +56,6 @@ string preformat( string const & str )
         result += "&nbsp;";
         continue;
       }
-      else
       if ( *nextChar == '\t' )
       {
         result += "&nbsp;&nbsp;&nbsp;&nbsp;";

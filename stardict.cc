@@ -11,20 +11,14 @@
 #include "htmlescape.hh"
 #include "langcoder.hh"
 
+extern "C" {
 #include <zlib.h>
+#include <arpa/inet.h>
+}
 #include <map>
 #include <set>
 #include <string>
-#ifndef __WIN32
-#include <arpa/inet.h>
-#else
-#include <winsock.h>
-#endif
-#include <stdlib.h>
-
-#ifdef _MSC_VER
-#include <stub_msvc.h>
-#endif
+#include <cstdlib>
 
 #include <QString>
 #include <QSemaphore>
@@ -66,33 +60,33 @@ DEF_EX_STR( exIncorrectOffset, "Incorrect offset encountered in file", Dictionar
 /// Contents of an ifo file
 struct Ifo
 {
-  string version;
-  string bookname;
-  uint32_t wordcount, synwordcount, idxfilesize, idxoffsetbits;
-  string sametypesequence, dicttype;
+    string version;
+    string bookname;
+    uint32_t wordcount, synwordcount, idxfilesize, idxoffsetbits;
+    string sametypesequence, dicttype;
 
-  Ifo( File::Class & );
+    Ifo( File::Class & );
 };
 
 enum
 {
-  Signature = 0x58444953, // SIDX on little-endian, XDIS on big-endian
-  CurrentFormatVersion = 7 + BtreeIndexing::FormatVersion + Folding::Version
+    Signature = 0x58444953, // SIDX on little-endian, XDIS on big-endian
+    CurrentFormatVersion = 7 + BtreeIndexing::FormatVersion + Folding::Version
 };
 
 struct IdxHeader
 {
-  uint32_t signature; // First comes the signature, SIDX
-  uint32_t formatVersion; // File format version (CurrentFormatVersion)
-  uint32_t chunksOffset; // The offset to chunks' storage
-  uint32_t indexBtreeMaxElements; // Two fields from IndexInfo
-  uint32_t indexRootOffset;
-  uint32_t wordCount; // Saved from Ifo::wordcount
-  uint32_t synWordCount; // Saved from Ifo::synwordcount
-  uint32_t bookNameSize; // Book name's length. Used to read it then.
-  uint32_t sameTypeSequenceSize; // That string's size. Used to read it then.
-  uint32_t langFrom;  // Source language
-  uint32_t langTo;    // Target language
+    uint32_t signature; // First comes the signature, SIDX
+    uint32_t formatVersion; // File format version (CurrentFormatVersion)
+    uint32_t chunksOffset; // The offset to chunks' storage
+    uint32_t indexBtreeMaxElements; // Two fields from IndexInfo
+    uint32_t indexRootOffset;
+    uint32_t wordCount; // Saved from Ifo::wordcount
+    uint32_t synWordCount; // Saved from Ifo::synwordcount
+    uint32_t bookNameSize; // Book name's length. Used to read it then.
+    uint32_t sameTypeSequenceSize; // That string's size. Used to read it then.
+    uint32_t langFrom;  // Source language
+    uint32_t langTo;    // Target language
 }
 #ifndef _MSC_VER
 __attribute__((packed))
@@ -101,184 +95,184 @@ __attribute__((packed))
 
 bool indexIsOldOrBad( string const & indexFile )
 {
-  File::Class idx( indexFile, "rb" );
+    File::Class idx( indexFile, "rb" );
 
-  IdxHeader header;
+    IdxHeader header {};
 
-  return idx.readRecords( &header, sizeof( header ), 1 ) != 1 ||
-         header.signature != Signature ||
-         header.formatVersion != CurrentFormatVersion;
+    return idx.readRecords( &header, sizeof( header ), 1 ) != 1 ||
+                                                              header.signature != Signature ||
+                                                                                  header.formatVersion != CurrentFormatVersion;
 }
 
 
 class StardictDictionary: public BtreeIndexing::BtreeDictionary
 {
-  Mutex idxMutex;
-  File::Class idx;
-  IdxHeader idxHeader;
-  string bookName;
-  string sameTypeSequence;
-  ChunkedStorage::Reader chunks;
-  Mutex dzMutex;
-  dictData * dz;
+    Mutex idxMutex;
+    File::Class idx;
+    IdxHeader idxHeader;
+    string bookName;
+    string sameTypeSequence;
+    ChunkedStorage::Reader chunks;
+    Mutex dzMutex;
+    dictData * dz;
 
 public:
 
-  StardictDictionary( string const & id, string const & indexFile,
-                      vector< string > const & dictionaryFiles );
+    StardictDictionary( string const & id, string const & indexFile,
+                        vector< string > const & dictionaryFiles );
 
-  ~StardictDictionary();
+    ~StardictDictionary() override;
 
-  virtual string getName() throw()
-  { return bookName; }
+    string getName() override
+    { return bookName; }
 
-  virtual map< Dictionary::Property, string > getProperties() throw()
-  { return map< Dictionary::Property, string >(); }
+    map< Dictionary::Property, string > getProperties() override
+    { return map< Dictionary::Property, string >(); }
 
-  virtual unsigned long getArticleCount() throw()
-  { return idxHeader.wordCount; }
+    unsigned long getArticleCount() override
+    { return idxHeader.wordCount; }
 
-  virtual unsigned long getWordCount() throw()
-  { return idxHeader.wordCount + idxHeader.synWordCount; }
+    unsigned long getWordCount() override
+    { return idxHeader.wordCount + idxHeader.synWordCount; }
 
-  virtual QIcon getIcon() throw()
-  { return QIcon(":/icons/icon32_stardict.png"); }
+    inline quint32 getLangFrom() const override
+    { return idxHeader.langFrom; }
 
-  inline virtual quint32 getLangFrom() const
-  { return idxHeader.langFrom; }
+    inline quint32 getLangTo() const override
+    { return idxHeader.langTo; }
 
-  inline virtual quint32 getLangTo() const
-  { return idxHeader.langTo; }
+    sptr< Dictionary::WordSearchRequest > findHeadwordsForSynonym( wstring const & ) override;
 
-  virtual sptr< Dictionary::WordSearchRequest > findHeadwordsForSynonym( wstring const & )
-    throw( std::exception );
+    sptr< Dictionary::DataRequest > getArticle( wstring const &,
+                                                        vector< wstring > const & alts,
+                                                        wstring const & ) override;
 
-  virtual sptr< Dictionary::DataRequest > getArticle( wstring const &,
-                                                      vector< wstring > const & alts,
-                                                      wstring const & )
-    throw( std::exception );
+    StardictDictionary(const StardictDictionary &) = delete;
+    StardictDictionary& operator =(StardictDictionary const&) = delete;
+    StardictDictionary(StardictDictionary&&) = delete;
+    StardictDictionary& operator=(StardictDictionary&&) = delete;
 
 private:
 
-  /// Retrives the article's offset/size in .dict file, and its headword.
-  void getArticleProps( uint32_t articleAddress,
-                        string & headword,
-                        uint32_t & offset, uint32_t & size );
+    /// Retrives the article's offset/size in .dict file, and its headword.
+    void getArticleProps( uint32_t articleAddress,
+                          string & headword,
+                          uint32_t & offset, uint32_t & size );
 
-  /// Loads the article, storing its headword and formatting the data it has
-  /// into an html.
-  void loadArticle(  uint32_t address,
-                     string & headword,
-                     string & articleText );
+    /// Loads the article, storing its headword and formatting the data it has
+    /// into an html.
+    void loadArticle(  uint32_t address,
+                       string & headword,
+                       string & articleText );
 
-  string loadString( size_t size );
+    string loadString( size_t size );
 
-  friend class StardictArticleRequest;
-  friend class StardictHeadwordsRequest;
+    friend class StardictArticleRequest;
+    friend class StardictHeadwordsRequest;
 };
 
 StardictDictionary::StardictDictionary( string const & id,
                                         string const & indexFile,
                                         vector< string > const & dictionaryFiles ):
-  BtreeDictionary( id, dictionaryFiles ),
-  idx( indexFile, "rb" ),
-  idxHeader( idx.read< IdxHeader >() ),
-  bookName( loadString( idxHeader.bookNameSize ) ),
-  sameTypeSequence( loadString( idxHeader.sameTypeSequenceSize ) ),
-  chunks( idx, idxHeader.chunksOffset )
+    BtreeDictionary( id, dictionaryFiles ),
+    idx( indexFile, "rb" ),
+    idxHeader( idx.read< IdxHeader >() ),
+    bookName( loadString( idxHeader.bookNameSize ) ),
+    sameTypeSequence( loadString( idxHeader.sameTypeSequenceSize ) ),
+    chunks( idx, idxHeader.chunksOffset )
 {
-  // Open the .dict file
+    // Open the .dict file
 
-  dz = dict_data_open( dictionaryFiles[ 2 ].c_str(), 0 );
+    dz = dict_data_open( dictionaryFiles[ 2 ].c_str(), 0 );
 
-  if ( !dz )
-    throw exCantReadFile( dictionaryFiles[ 2 ] );
+    if ( !dz )
+        throw exCantReadFile( dictionaryFiles[ 2 ] );
 
-  // Initialize the index
+    // Initialize the index
 
-  openIndex( IndexInfo( idxHeader.indexBtreeMaxElements,
-                        idxHeader.indexRootOffset ),
-             idx, idxMutex );
+    openIndex( IndexInfo( idxHeader.indexBtreeMaxElements,
+                          idxHeader.indexRootOffset ),
+               idx, idxMutex );
 }
 
 StardictDictionary::~StardictDictionary()
 {
-  if ( dz )
-    dict_data_close( dz );
+    if ( dz )
+        dict_data_close( dz );
 }
 
 string StardictDictionary::loadString( size_t size )
 {
-  vector< char > data( size );
+    vector< char > data( size );
 
-  idx.read( &data.front(), data.size() );
+    idx.read( &data.front(), data.size() );
 
-  return string( &data.front(), data.size() );
+    return string( &data.front(), data.size() );
 }
 
 void StardictDictionary::getArticleProps( uint32_t articleAddress,
                                           string & headword,
                                           uint32_t & offset, uint32_t & size )
 {
-  vector< char > chunk;
+    vector< char > chunk;
 
-  Mutex::Lock _( idxMutex );
+    Mutex::Lock _( idxMutex );
 
-  char * articleData = chunks.getBlock( articleAddress, chunk );
+    char * articleData = chunks.getBlock( articleAddress, chunk );
 
-  memcpy( &offset, articleData, sizeof( uint32_t ) );
-  articleData += sizeof( uint32_t );
-  memcpy( &size, articleData, sizeof( uint32_t ) );
-  articleData += sizeof( uint32_t );
+    memcpy( &offset, articleData, sizeof( uint32_t ) );
+    articleData += sizeof( uint32_t );
+    memcpy( &size, articleData, sizeof( uint32_t ) );
+    articleData += sizeof( uint32_t );
 
-  headword = articleData;
+    headword = articleData;
 }
 
 /// This function tries to make an html of the Stardict's resource typed
 /// 'type', contained in a block pointed to by 'resource', 'size' bytes long.
-static string handleResource( char type, char const * resource, size_t size )
+string handleResource( char type, char const * resource, size_t size )
 {
-  switch( type )
-  {
-    case 'x': // Xdxf content
-      return Xdxf2Html::convert( string( resource, size ) );
-    case 'h': // Html content
-      return "<div class=\"sdct_h\">" + string( resource, size ) + "</div>";
-    case 'm': // Pure meaning, usually means preformatted text
-      return "<div class=\"sdct_m\">" + Html::preformat( string( resource, size ) ) + "</div>";
-    case 'l': // Same as 'm', but not in utf8, instead in current locale's
-              // encoding.
-              // We just use Qt here, it should know better about system's
-              // locale.
-      return "<div class=\"sdct_l\">" + Html::preformat( QString::fromLocal8Bit( resource, size ).toUtf8().data() ) + "</div>";
-    case 'g': // Pango markup.
-      return "<div class=\"sdct_g\">" + string( resource, size ) + "</div>";
-    case 't': // Transcription
-      return "<div class=\"sdct_t\">" + Html::escape( string( resource, size ) ) + "</div>";
-    case 'y': // Chinese YinBiao or Japanese KANA. Examples are needed. For now,
-              // just output as pure escaped utf8.
-      return "<div class=\"sdct_y\">" + Html::escape( string( resource, size ) ) + "</div>";
-    case 'k': // KingSoft PowerWord data. We don't know how to handle that.
-      return "<div class=\"sdct_k\">" + Html::escape( string( resource, size ) ) + "</div>";
-    case 'w': // MediaWiki markup. We don't handle this right now.
-      return "<div class=\"sdct_w\">" + Html::escape( string( resource, size ) ) + "</div>";
-    case 'n': // WordNet data. We don't know anything about it.
-      return "<div class=\"sdct_n\">" + Html::escape( string( resource, size ) ) + "</div>";
+    switch( type )
+    {
+        case 'x': // Xdxf content
+            return Xdxf2Html::convert( string( resource, size ) );
+        case 'h': // Html content
+            return "<div class=\"sdct_h\">" + string( resource, size ) + "</div>";
+        case 'm': // Pure meaning, usually means preformatted text
+            return "<div class=\"sdct_m\">" + Html::preformat( string( resource, size ) ) + "</div>";
+        case 'l': // Same as 'm', but not in utf8, instead in current locale's
+            // encoding.
+            // We just use Qt here, it should know better about system's
+            // locale.
+            return "<div class=\"sdct_l\">" + Html::preformat( QString::fromLocal8Bit( resource, size ).toUtf8().constData() ) + "</div>";
+        case 'g': // Pango markup.
+            return "<div class=\"sdct_g\">" + string( resource, size ) + "</div>";
+        case 't': // Transcription
+            return "<div class=\"sdct_t\">" + Html::escape( string( resource, size ) ) + "</div>";
+        case 'y': // Chinese YinBiao or Japanese KANA. Examples are needed. For now,
+            // just output as pure escaped utf8.
+            return "<div class=\"sdct_y\">" + Html::escape( string( resource, size ) ) + "</div>";
+        case 'k': // KingSoft PowerWord data. We don't know how to handle that.
+            return "<div class=\"sdct_k\">" + Html::escape( string( resource, size ) ) + "</div>";
+        case 'w': // MediaWiki markup. We don't handle this right now.
+            return "<div class=\"sdct_w\">" + Html::escape( string( resource, size ) ) + "</div>";
+        case 'n': // WordNet data. We don't know anything about it.
+            return "<div class=\"sdct_n\">" + Html::escape( string( resource, size ) ) + "</div>";
 
-    case 'r': // Resource file list. For now, resources aren't handled.
-      return "<div class=\"sdct_r\">" + Html::escape( string( resource, size ) ) + "</div>";
+        case 'r': // Resource file list. For now, resources aren't handled.
+            return "<div class=\"sdct_r\">" + Html::escape( string( resource, size ) ) + "</div>";
 
-    case 'W': // An embedded Wav file. Unhandled yet.
-      return "<div class=\"sdct_W\">(an embedded .wav file)</div>";
-    case 'P': // An embedded picture file. Unhandled yet.
-      return "<div class=\"sdct_P\">(an embedded picture file)</div>";
-  }
+        case 'W': // An embedded Wav file. Unhandled yet.
+            return "<div class=\"sdct_W\">(an embedded .wav file)</div>";
+        case 'P': // An embedded picture file. Unhandled yet.
+            return "<div class=\"sdct_P\">(an embedded picture file)</div>";
+    }
 
-  if ( islower( type ) )
-  {
-    return string( "<b>Unknown textual entry type " ) + string( 1, type ) + ":</b> " + Html::escape( string( resource, size ) ) + "<br>";
-  }
-  else
+    if ( islower( type ) )
+    {
+        return string( "<b>Unknown textual entry type " ) + string( 1, type ) + ":</b> " + Html::escape( string( resource, size ) ) + "<br>";
+    }
+
     return string( "<b>Unknown blob entry type " ) + string( 1, type ) + "</b><br>";
 }
 
@@ -286,166 +280,172 @@ void StardictDictionary::loadArticle( uint32_t address,
                                       string & headword,
                                       string & articleText )
 {
-  uint32_t offset, size;
+    uint32_t offset, size;
 
-  getArticleProps( address, headword, offset, size );
+    getArticleProps( address, headword, offset, size );
 
-  char * articleBody;
+    char * articleBody;
 
-  {
-    Mutex::Lock _( dzMutex );
-
-    // Note that the function always zero-pads the result.
-    articleBody = dict_data_read_( dz, offset, size, 0, 0 );
-  }
-
-  if ( !articleBody )
-    throw exCantReadFile( getDictionaryFilenames()[ 2 ] );
-
-  articleText.clear();
-
-  char * ptr = articleBody;
-
-  if ( sameTypeSequence.size() )
-  {
-    /// The sequence is known, it's not stored in the article itself
-    for( unsigned seq = 0; seq < sameTypeSequence.size(); ++seq )
     {
-      // Last entry doesn't have size info -- it is inferred from
-      // the bytes left
-      bool entrySizeKnown = ( seq == sameTypeSequence.size() - 1 );
+        Mutex::Lock _( dzMutex );
 
-      uint32_t entrySize;
-
-      if ( entrySizeKnown )
-        entrySize = size;
-      else
-      if ( !size )
-      {
-        fprintf( stderr, "Warning: short entry for the word %s encountered.\n", headword.c_str() );
-        break;
-      }
-
-      char type = sameTypeSequence[ seq ];
-
-      if ( islower( type ) )
-      {
-        // Zero-terminated entry, unless it's the last one
-        if ( !entrySizeKnown )
-          entrySize = strlen( ptr );
-
-        if ( size < entrySize )
-        {
-          fprintf( stderr, "Warning: malformed entry for the word %s encountered.\n", headword.c_str() );
-          break;
-        }
-
-        articleText += handleResource( type, ptr, entrySize );
-
-        if ( !entrySizeKnown )
-          ++entrySize; // Need to skip the zero byte
-
-        ptr += entrySize;
-        size -= entrySize;
-      }
-      else
-      if ( isupper( *ptr ) )
-      {
-        // An entry which has its size before contents, unless it's the last one
-
-        if ( !entrySizeKnown )
-        {
-          if ( size < sizeof( uint32_t ) )
-          {
-            fprintf( stderr, "Warning: malformed entry for the word %s encountered.\n", headword.c_str() );
-            break;
-          }
-
-          memcpy( &entrySize, ptr, sizeof( uint32_t ) );
-
-          entrySize = ntohl( entrySize );
-
-          ptr += sizeof( uint32_t );
-          size -= sizeof( uint32_t );
-        }
-
-        if ( size < entrySize )
-        {
-          fprintf( stderr, "Warning: malformed entry for the word %s encountered.\n", headword.c_str() );
-          break;
-        }
-
-        articleText += handleResource( type, ptr, entrySize );
-
-        ptr += entrySize;
-        size -= entrySize;
-      }
-      else
-      {
-        fprintf( stderr, "Warning: non-alpha entry type 0x%x for the word %s encountered.\n",
-                         type, headword.c_str() );
-        break;
-      }
+        // Note that the function always zero-pads the result.
+        articleBody = dict_data_read_( dz, offset, size, nullptr, nullptr );
     }
-  }
-  else
-  {
-    // The sequence is stored in each article separately
-    while( size )
+
+    if ( !articleBody )
+        throw exCantReadFile( getDictionaryFilenames()[ 2 ] );
+
+    articleText.clear();
+
+    char * ptr = articleBody;
+
+    if ( !sameTypeSequence.empty() )
     {
-      if ( islower( *ptr ) )
-      {
-        // Zero-terminated entry
-        size_t len = strlen( ptr + 1 );
-
-        if ( size < len + 2 )
+        /// The sequence is known, it's not stored in the article itself
+        for( unsigned seq = 0; seq < sameTypeSequence.size(); ++seq )
         {
-          fprintf( stderr, "Warning: malformed entry for the word %s encountered.\n", headword.c_str() );
-          break;
+            // Last entry doesn't have size info -- it is inferred from
+            // the bytes left
+            bool entrySizeKnown = ( seq == sameTypeSequence.size() - 1 );
+
+            uint32_t entrySize;
+
+            if ( entrySizeKnown )
+                entrySize = size;
+            else
+                if ( !size )
+                {
+                    qWarning() << "Warning: short entry for the word encountered: " << headword.c_str();
+                    break;
+                }
+
+            char type = sameTypeSequence[ seq ];
+
+            if ( islower( type ) )
+            {
+                // Zero-terminated entry, unless it's the last one
+                if ( !entrySizeKnown )
+                    entrySize = strlen( ptr );
+
+                if ( size < entrySize )
+                {
+                    qWarning() << "Warning: malformed entry for the word encountered. " << headword.c_str();
+                    break;
+                }
+
+                articleText += handleResource( type, ptr, entrySize );
+
+                if ( !entrySizeKnown )
+                    ++entrySize; // Need to skip the zero byte
+
+                ptr += entrySize;
+                size -= entrySize;
+            }
+            else
+                if ( isupper( *ptr ) )
+                {
+                    // An entry which has its size before contents, unless it's the last one
+
+                    if ( !entrySizeKnown )
+                    {
+                        if ( size < sizeof( uint32_t ) )
+                        {
+                            qWarning() << "Warning: malformed entry for the word encountered: "
+                                       << headword.c_str();
+                            break;
+                        }
+
+                        memcpy( &entrySize, ptr, sizeof( uint32_t ) );
+
+                        entrySize = ntohl( entrySize );
+
+                        ptr += sizeof( uint32_t );
+                        size -= sizeof( uint32_t );
+                    }
+
+                    if ( size < entrySize )
+                    {
+                        qWarning() << "Warning: malformed entry for the word encountered: "
+                                   << headword.c_str();
+                        break;
+                    }
+
+                    articleText += handleResource( type, ptr, entrySize );
+
+                    ptr += entrySize;
+                    size -= entrySize;
+                }
+                else
+                {
+                    qWarning() << "Warning: non-alpha entry type "
+                               << QString::number(type,16) << " for the word encountered: "
+                               << headword.c_str();
+                    break;
+                }
         }
-
-        articleText += handleResource( *ptr, ptr + 1, len );
-
-        ptr += len + 2;
-        size -= len + 2;
-      }
-      else
-      if ( isupper( *ptr ) )
-      {
-        // An entry which havs its size before contents
-        if ( size < sizeof( uint32_t ) + 1 )
-        {
-          fprintf( stderr, "Warning: malformed entry for the word %s encountered.\n", headword.c_str() );
-          break;
-        }
-
-        uint32_t entrySize;
-
-        memcpy( &entrySize, ptr + 1, sizeof( uint32_t ) );
-
-        entrySize = ntohl( entrySize );
-
-        if ( size < sizeof( uint32_t ) + 1 + entrySize )
-        {
-          fprintf( stderr, "Warning: malformed entry for the word %s encountered.\n", headword.c_str() );
-          break;
-        }
-
-        articleText += handleResource( *ptr, ptr + 1 + sizeof( uint32_t ), entrySize );
-
-        ptr += sizeof( uint32_t ) + 1 + entrySize;
-        size -= sizeof( uint32_t ) + 1 + entrySize;
-      }
-      else
-      {
-        fprintf( stderr, "Warning: non-alpha entry type 0x%x for the word %s encountered.\n",
-                         (unsigned)*ptr, headword.c_str() );
-        break;
-      }
     }
-  }
+    else
+    {
+        // The sequence is stored in each article separately
+        while( size )
+        {
+            if ( islower( *ptr ) )
+            {
+                // Zero-terminated entry
+                size_t len = strlen( ptr + 1 );
 
-  free( articleBody );
+                if ( size < len + 2 )
+                {
+                    qWarning() << "Warning: malformed entry for the word encountered: " << headword.c_str();
+                    break;
+                }
+
+                articleText += handleResource( *ptr, ptr + 1, len );
+
+                ptr += len + 2;
+                size -= len + 2;
+            }
+            else
+                if ( isupper( *ptr ) )
+                {
+                    // An entry which havs its size before contents
+                    if ( size < sizeof( uint32_t ) + 1 )
+                    {
+                        qWarning() << "Warning: malformed entry for the word encountered: "
+                                   << headword.c_str();
+                        break;
+                    }
+
+                    uint32_t entrySize;
+
+                    memcpy( &entrySize, ptr + 1, sizeof( uint32_t ) );
+
+                    entrySize = ntohl( entrySize );
+
+                    if ( size < sizeof( uint32_t ) + 1 + entrySize )
+                    {
+                        qWarning() << "Warning: malformed entry for the word encountered: "
+                                   << headword.c_str();
+                        break;
+                    }
+
+                    articleText += handleResource( *ptr, ptr + 1 + sizeof( uint32_t ), entrySize );
+
+                    ptr += sizeof( uint32_t ) + 1 + entrySize;
+                    size -= sizeof( uint32_t ) + 1 + entrySize;
+                }
+                else
+                {
+                    qWarning() << "Warning: non-alpha entry type "
+                               << QString::number((unsigned)*ptr,16) << " for the word encountered: "
+                               << headword.c_str();
+                    break;
+                }
+        }
+    }
+
+    free( articleBody );
 }
 
 
@@ -455,115 +455,126 @@ class StardictHeadwordsRequest;
 
 class StardictHeadwordsRequestRunnable: public QRunnable
 {
-  StardictHeadwordsRequest & r;
-  QSemaphore & hasExited;
+    StardictHeadwordsRequest & r;
+    QSemaphore & hasExited;
 
 public:
 
-  StardictHeadwordsRequestRunnable( StardictHeadwordsRequest & r_,
-                                    QSemaphore & hasExited_ ): r( r_ ),
-                                                               hasExited( hasExited_ )
-  {}
+    StardictHeadwordsRequestRunnable( StardictHeadwordsRequest & r_,
+                                      QSemaphore & hasExited_ ): r( r_ ),
+        hasExited( hasExited_ )
+    {}
 
-  ~StardictHeadwordsRequestRunnable()
-  {
-    hasExited.release();
-  }
+    ~StardictHeadwordsRequestRunnable() override
+    {
+        hasExited.release();
+    }
 
-  virtual void run();
+    void run() override;
+
+    StardictHeadwordsRequestRunnable(const StardictHeadwordsRequestRunnable &) = delete;
+    StardictHeadwordsRequestRunnable& operator =(StardictHeadwordsRequestRunnable const&) = delete;
+    StardictHeadwordsRequestRunnable(StardictHeadwordsRequestRunnable&&) = delete;
+    StardictHeadwordsRequestRunnable& operator=(StardictHeadwordsRequestRunnable&&) = delete;
+
 };
 
 class StardictHeadwordsRequest: public Dictionary::WordSearchRequest
 {
-  friend class StardictHeadwordsRequestRunnable;
+    friend class StardictHeadwordsRequestRunnable;
 
-  wstring word;
-  StardictDictionary & dict;
+    wstring word;
+    StardictDictionary & dict;
 
-  QAtomicInt isCancelled;
-  QSemaphore hasExited;
+    QAtomicInt isCancelled;
+    QSemaphore hasExited;
 
 public:
 
-  StardictHeadwordsRequest( wstring const & word_,
-                            StardictDictionary & dict_ ):
-    word( word_ ), dict( dict_ )
-  {
-    QThreadPool::globalInstance()->start(
-      new StardictHeadwordsRequestRunnable( *this, hasExited ) );
-  }
+    StardictHeadwordsRequest( wstring const & word_,
+                              StardictDictionary & dict_ ):
+        word( word_ ), dict( dict_ )
+    {
+        QThreadPool::globalInstance()->start(
+                    new StardictHeadwordsRequestRunnable( *this, hasExited ) );
+    }
 
-  void run(); // Run from another thread by StardictHeadwordsRequestRunnable
+    void run(); // Run from another thread by StardictHeadwordsRequestRunnable
 
-  virtual void cancel()
-  {
-    isCancelled.ref();
-  }
+    void cancel() override
+    {
+        isCancelled.ref();
+    }
 
-  ~StardictHeadwordsRequest()
-  {
-    isCancelled.ref();
-    hasExited.acquire();
-  }
+    ~StardictHeadwordsRequest() override
+    {
+        isCancelled.ref();
+        hasExited.acquire();
+    }
+
+    StardictHeadwordsRequest(const StardictHeadwordsRequest &) = delete;
+    StardictHeadwordsRequest& operator =(StardictHeadwordsRequest const&) = delete;
+    StardictHeadwordsRequest(StardictHeadwordsRequest&&) = delete;
+    StardictHeadwordsRequest& operator=(StardictHeadwordsRequest&&) = delete;
+
 };
 
 void StardictHeadwordsRequestRunnable::run()
 {
-  r.run();
+    r.run();
 }
 
 void StardictHeadwordsRequest::run()
 {
-  if ( isCancelled.load() != 0 )
-  {
-    finish();
-    return;
-  }
-
-  try
-  {
-    vector< WordArticleLink > chain = dict.findArticles( word );
-
-    wstring caseFolded = Folding::applySimpleCaseOnly( word );
-
-    for( unsigned x = 0; x < chain.size(); ++x )
+    if ( isCancelled.load() != 0 )
     {
-      if ( isCancelled.load() != 0 )
-      {
         finish();
         return;
-      }
-
-      string headword, articleText;
-
-      dict.loadArticle( chain[ x ].articleOffset,
-                        headword, articleText );
-
-      wstring headwordDecoded = Utf8::decode( headword );
-
-      if ( caseFolded != Folding::applySimpleCaseOnly( headwordDecoded ) )
-      {
-        // The headword seems to differ from the input word, which makes the
-        // input word its synonym.
-        Mutex::Lock _( dataMutex );
-
-        matches.push_back( headwordDecoded );
-      }
     }
-  }
-  catch( std::exception & e )
-  {
-    setErrorString( QString::fromUtf8( e.what() ) );
-  }
 
-  finish();
+    try
+    {
+        vector< WordArticleLink > chain = dict.findArticles( word );
+
+        wstring caseFolded = Folding::applySimpleCaseOnly( word );
+
+        for( const auto & cx : chain )
+        {
+            if ( isCancelled.load() != 0 )
+            {
+                finish();
+                return;
+            }
+
+            string headword, articleText;
+
+            dict.loadArticle( cx.articleOffset,
+                              headword, articleText );
+
+            wstring headwordDecoded = Utf8::decode( headword );
+
+            if ( caseFolded != Folding::applySimpleCaseOnly( headwordDecoded ) )
+            {
+                // The headword seems to differ from the input word, which makes the
+                // input word its synonym.
+                Mutex::Lock _( dataMutex );
+
+                matches.emplace_back( headwordDecoded );
+            }
+        }
+    }
+    catch( std::exception & e )
+    {
+        setErrorString( QString::fromUtf8( e.what() ) );
+    }
+
+    finish();
 }
 
 sptr< Dictionary::WordSearchRequest >
-  StardictDictionary::findHeadwordsForSynonym( wstring const & word )
-  throw( std::exception )
+StardictDictionary::findHeadwordsForSynonym( wstring const & word )
 {
-  return new StardictHeadwordsRequest( word, *this );
+    return new StardictHeadwordsRequest( word, *this );
 }
 
 
@@ -573,311 +584,322 @@ class StardictArticleRequest;
 
 class StardictArticleRequestRunnable: public QRunnable
 {
-  StardictArticleRequest & r;
-  QSemaphore & hasExited;
+    StardictArticleRequest & r;
+    QSemaphore & hasExited;
 
 public:
 
-  StardictArticleRequestRunnable( StardictArticleRequest & r_,
-                                  QSemaphore & hasExited_ ): r( r_ ),
-                                                             hasExited( hasExited_ )
-  {}
+    StardictArticleRequestRunnable( StardictArticleRequest & r_,
+                                    QSemaphore & hasExited_ ): r( r_ ),
+        hasExited( hasExited_ )
+    {}
 
-  ~StardictArticleRequestRunnable()
-  {
-    hasExited.release();
-  }
+    ~StardictArticleRequestRunnable() override
+    {
+        hasExited.release();
+    }
 
-  virtual void run();
+    void run() override;
+
+    StardictArticleRequestRunnable(const StardictArticleRequestRunnable &) = delete;
+    StardictArticleRequestRunnable& operator =(StardictArticleRequestRunnable const&) = delete;
+    StardictArticleRequestRunnable(StardictArticleRequestRunnable&&) = delete;
+    StardictArticleRequestRunnable& operator=(StardictArticleRequestRunnable&&) = delete;
+
 };
 
 class StardictArticleRequest: public Dictionary::DataRequest
 {
-  friend class StardictArticleRequestRunnable;
+    friend class StardictArticleRequestRunnable;
 
-  wstring word;
-  vector< wstring > alts;
-  StardictDictionary & dict;
+    wstring word;
+    vector< wstring > alts;
+    StardictDictionary & dict;
 
-  QAtomicInt isCancelled;
-  QSemaphore hasExited;
+    QAtomicInt isCancelled;
+    QSemaphore hasExited;
 
 public:
 
-  StardictArticleRequest( wstring const & word_,
-                     vector< wstring > const & alts_,
-                     StardictDictionary & dict_ ):
-    word( word_ ), alts( alts_ ), dict( dict_ )
-  {
-    QThreadPool::globalInstance()->start(
-      new StardictArticleRequestRunnable( *this, hasExited ) );
-  }
+    StardictArticleRequest( wstring const & word_,
+                            vector< wstring > const & alts_,
+                            StardictDictionary & dict_ ):
+        word( word_ ), alts( alts_ ), dict( dict_ )
+    {
+        QThreadPool::globalInstance()->start(
+                    new StardictArticleRequestRunnable( *this, hasExited ) );
+    }
 
-  void run(); // Run from another thread by StardictArticleRequestRunnable
+    void run(); // Run from another thread by StardictArticleRequestRunnable
 
-  virtual void cancel()
-  {
-    isCancelled.ref();
-  }
+    void cancel() override
+    {
+        isCancelled.ref();
+    }
 
-  ~StardictArticleRequest()
-  {
-    isCancelled.ref();
-    hasExited.acquire();
-  }
+    ~StardictArticleRequest() override
+    {
+        isCancelled.ref();
+        hasExited.acquire();
+    }
+
+    StardictArticleRequest(const StardictArticleRequest &) = delete;
+    StardictArticleRequest& operator =(StardictArticleRequest const&) = delete;
+    StardictArticleRequest(StardictArticleRequest&&) = delete;
+    StardictArticleRequest& operator=(StardictArticleRequest&&) = delete;
+
 };
 
 void StardictArticleRequestRunnable::run()
 {
-  r.run();
+    r.run();
 }
 
 void StardictArticleRequest::run()
 {
-  if ( isCancelled.load() != 0 )
-  {
-    finish();
-    return;
-  }
-
-  try
-  {
-    vector< WordArticleLink > chain = dict.findArticles( word );
-
-    for( unsigned x = 0; x < alts.size(); ++x )
+    if ( isCancelled.load() != 0 )
     {
-      /// Make an additional query for each alt
-
-      vector< WordArticleLink > altChain = dict.findArticles( alts[ x ] );
-
-      chain.insert( chain.end(), altChain.begin(), altChain.end() );
-    }
-
-    multimap< wstring, pair< string, string > > mainArticles, alternateArticles;
-
-    set< uint32_t > articlesIncluded; // Some synonims make it that the articles
-                                      // appear several times. We combat this
-                                      // by only allowing them to appear once.
-
-    wstring wordCaseFolded = Folding::applySimpleCaseOnly( word );
-
-    for( unsigned x = 0; x < chain.size(); ++x )
-    {
-      if ( isCancelled.load() != 0 )
-      {
         finish();
         return;
-      }
-
-      if ( articlesIncluded.find( chain[ x ].articleOffset ) != articlesIncluded.end() )
-        continue; // We already have this article in the body.
-
-      // Now grab that article
-
-      string headword, articleText;
-
-      dict.loadArticle( chain[ x ].articleOffset, headword, articleText );
-
-      // Ok. Now, does it go to main articles, or to alternate ones? We list
-      // main ones first, and alternates after.
-
-      // We do the case-folded comparison here.
-
-      wstring headwordStripped =
-        Folding::applySimpleCaseOnly( Utf8::decode( headword ) );
-
-      multimap< wstring, pair< string, string > > & mapToUse =
-        ( wordCaseFolded == headwordStripped ) ?
-          mainArticles : alternateArticles;
-
-      mapToUse.insert( pair< wstring, pair< string, string > >(
-        Folding::applySimpleCaseOnly( Utf8::decode( headword ) ),
-        pair< string, string >( headword, articleText ) ) );
-
-      articlesIncluded.insert( chain[ x ].articleOffset );
     }
 
-    if ( mainArticles.empty() && alternateArticles.empty() )
+    try
     {
-      // No such word
-      finish();
-      return;
+        vector< WordArticleLink > chain = dict.findArticles( word );
+
+        for( const auto & alt : alts )
+        {
+            /// Make an additional query for each alt
+
+            vector< WordArticleLink > altChain = dict.findArticles( alt );
+
+            chain.insert( chain.end(), altChain.cbegin(), altChain.cend() );
+        }
+
+        multimap< wstring, pair< string, string > > mainArticles, alternateArticles;
+
+        set< uint32_t > articlesIncluded; // Some synonims make it that the articles
+        // appear several times. We combat this
+        // by only allowing them to appear once.
+
+        wstring wordCaseFolded = Folding::applySimpleCaseOnly( word );
+
+        for( const auto & cx : chain )
+        {
+            if ( isCancelled.load() != 0 )
+            {
+                finish();
+                return;
+            }
+
+            if ( articlesIncluded.find( cx.articleOffset ) != articlesIncluded.end() )
+                continue; // We already have this article in the body.
+
+            // Now grab that article
+
+            string headword, articleText;
+
+            dict.loadArticle( cx.articleOffset, headword, articleText );
+
+            // Ok. Now, does it go to main articles, or to alternate ones? We list
+            // main ones first, and alternates after.
+
+            // We do the case-folded comparison here.
+
+            wstring headwordStripped =
+                    Folding::applySimpleCaseOnly( Utf8::decode( headword ) );
+
+            multimap< wstring, pair< string, string > > & mapToUse =
+                    ( wordCaseFolded == headwordStripped ) ?
+                        mainArticles : alternateArticles;
+
+            mapToUse.insert( pair< wstring, pair< string, string > >(
+                                 Folding::applySimpleCaseOnly( Utf8::decode( headword ) ),
+                                 pair< string, string >( headword, articleText ) ) );
+
+            articlesIncluded.insert( cx.articleOffset );
+        }
+
+        if ( mainArticles.empty() && alternateArticles.empty() )
+        {
+            // No such word
+            finish();
+            return;
+        }
+
+        string result;
+
+        multimap< wstring, pair< string, string > >::const_iterator i;
+
+        string cleaner = "</font>""</font>""</font>""</font>""</font>""</font>"
+                         "</font>""</font>""</font>""</font>""</font>""</font>"
+                         "</b></b></b></b></b></b></b></b>"
+                         "</i></i></i></i></i></i></i></i>";
+
+        for( i = mainArticles.begin(); i != mainArticles.end(); ++i )
+        {
+            result += "<h3>";
+            result += i->second.first;
+            result += "</h3>";
+            result += i->second.second;
+            result += cleaner;
+        }
+
+        for( i = alternateArticles.begin(); i != alternateArticles.end(); ++i )
+        {
+            result += "<h3>";
+            result += i->second.first;
+            result += "</h3>";
+            result += i->second.second;
+            result += cleaner;
+        }
+        result = QString::fromUtf8( result.c_str() )
+                 .replace( QRegExp( "(<\\s*a\\s+[^>]*href\\s*=\\s*[\"']\\s*)bword://", Qt::CaseInsensitive ),
+                           "\\1bword:" )
+                 .toUtf8().constData();
+
+        Mutex::Lock _( dataMutex );
+
+        data.resize( result.size() );
+
+        memcpy( &data.front(), result.data(), result.size() );
+
+        hasAnyData = true;
     }
-
-    string result;
-
-    multimap< wstring, pair< string, string > >::const_iterator i;
-
-    string cleaner = "</font>""</font>""</font>""</font>""</font>""</font>"
-                     "</font>""</font>""</font>""</font>""</font>""</font>"
-                     "</b></b></b></b></b></b></b></b>"
-                     "</i></i></i></i></i></i></i></i>";
-
-    for( i = mainArticles.begin(); i != mainArticles.end(); ++i )
+    catch( std::exception & e )
     {
-        result += "<h3>";
-        result += i->second.first;
-        result += "</h3>";
-        result += i->second.second;
-        result += cleaner;
+        setErrorString( QString::fromUtf8( e.what() ) );
     }
 
-    for( i = alternateArticles.begin(); i != alternateArticles.end(); ++i )
-    {
-        result += "<h3>";
-        result += i->second.first;
-        result += "</h3>";
-        result += i->second.second;
-        result += cleaner;
-    }
-    result = QString::fromUtf8( result.c_str() )
-             .replace( QRegExp( "(<\\s*a\\s+[^>]*href\\s*=\\s*[\"']\\s*)bword://", Qt::CaseInsensitive ),
-                       "\\1bword:" )
-             .toUtf8().data();
-
-    Mutex::Lock _( dataMutex );
-
-    data.resize( result.size() );
-
-    memcpy( &data.front(), result.data(), result.size() );
-
-    hasAnyData = true;
-  }
-  catch( std::exception & e )
-  {
-    setErrorString( QString::fromUtf8( e.what() ) );
-  }
-
-  finish();
+    finish();
 }
 
 sptr< Dictionary::DataRequest > StardictDictionary::getArticle( wstring const & word,
                                                                 vector< wstring > const & alts,
                                                                 wstring const & )
-  throw( std::exception )
 {
-  return new StardictArticleRequest( word, alts, *this );
+    return new StardictArticleRequest( word, alts, *this );
 }
 
 
-static char const * beginsWith( char const * substr, char const * str )
+char const * beginsWith( char const * substr, char const * str )
 {
-  size_t len = strlen( substr );
+    size_t len = strlen( substr );
 
-  return strncmp( str, substr, len ) == 0 ? str + len : 0;
+    return strncmp( str, substr, len ) == 0 ? str + len : nullptr;
 }
 
 Ifo::Ifo( File::Class & f ):
-  wordcount( 0 ), synwordcount( 0 ), idxfilesize( 0 ), idxoffsetbits( 32 )
+    wordcount( 0 ), synwordcount( 0 ), idxfilesize( 0 ), idxoffsetbits( 32 )
 {
-  static string const versionEq( "version=" );
+    static string const versionEq( "version=" );
 
-  static string const booknameEq( "bookname=" );
+    static string const booknameEq( "bookname=" );
 
-  //printf( "%s<\n", f.gets().c_str() );
-  //printf( "%s<\n", f.gets().c_str() );
+    //printf( "%s<\n", f.gets().c_str() );
+    //printf( "%s<\n", f.gets().c_str() );
 
-  if ( f.gets() != "StarDict's dict ifo file" ||
-       f.gets().compare( 0, versionEq.size(), versionEq ) )
-    throw exNotAnIfoFile();
+    if ( f.gets() != "StarDict's dict ifo file" ||
+         f.gets().compare( 0, versionEq.size(), versionEq ) )
+        throw exNotAnIfoFile();
 
-  /// Now go through the file and parse options
+    /// Now go through the file and parse options
 
-  try
-  {
-    char option[ 16384 ];
-
-    for( ; ; )
+    try
     {
-      if ( !f.gets( option, sizeof( option ), true ) )
-        break;
+        char option[ 16384 ];
 
-      if ( char const * val = beginsWith( "bookname=", option ) )
-        bookname = val;
-      else
-      if ( char const * val = beginsWith( "wordcount=", option ) )
-      {
-        if ( sscanf( val, "%u", & wordcount ) != 1 )
-          throw exBadFieldInIfo( option );
-      }
-      else
-      if ( char const * val = beginsWith( "synwordcount=", option ) )
-      {
-        if ( sscanf( val, "%u", & synwordcount ) != 1 )
-          throw exBadFieldInIfo( option );
-      }
-      else
-      if ( char const * val = beginsWith( "idxfilesize=", option ) )
-      {
-        if ( sscanf( val, "%u", & idxfilesize ) != 1 )
-          throw exBadFieldInIfo( option );
-      }
-      else
-      if ( char const * val = beginsWith( "idxoffsetbits=", option ) )
-      {
-        if ( sscanf( val, "%u", & idxoffsetbits ) != 1 || ( idxoffsetbits != 32
-             && idxoffsetbits != 64 ) )
-          throw exBadFieldInIfo( option );
-      }
-      else
-      if ( char const * val = beginsWith( "sametypesequence=", option ) )
-        sametypesequence = val;
-      else
-      if ( char const * val = beginsWith( "dicttype=", option ) )
-        dicttype = val;
+        for( ; ; )
+        {
+            if ( !f.gets( option, sizeof( option ), true ) )
+                break;
+
+            if ( char const * val = beginsWith( "bookname=", option ) )
+                bookname = val;
+            else
+                if ( char const * val = beginsWith( "wordcount=", option ) )
+                {
+                    if ( sscanf( val, "%u", & wordcount ) != 1 )
+                        throw exBadFieldInIfo( option );
+                }
+                else
+                    if ( char const * val = beginsWith( "synwordcount=", option ) )
+                    {
+                        if ( sscanf( val, "%u", & synwordcount ) != 1 )
+                            throw exBadFieldInIfo( option );
+                    }
+                    else
+                        if ( char const * val = beginsWith( "idxfilesize=", option ) )
+                        {
+                            if ( sscanf( val, "%u", & idxfilesize ) != 1 )
+                                throw exBadFieldInIfo( option );
+                        }
+                        else
+                            if ( char const * val = beginsWith( "idxoffsetbits=", option ) )
+                            {
+                                if ( sscanf( val, "%u", & idxoffsetbits ) != 1 || ( idxoffsetbits != 32
+                                                                                    && idxoffsetbits != 64 ) )
+                                    throw exBadFieldInIfo( option );
+                            }
+                            else
+                                if ( char const * val = beginsWith( "sametypesequence=", option ) )
+                                    sametypesequence = val;
+                                else
+                                    if ( char const * val = beginsWith( "dicttype=", option ) )
+                                        dicttype = val;
+        }
     }
-  }
-  catch( File::exReadError & )
-  {
-  }
+    catch( File::exReadError & )
+    {
+    }
 }
 
 } // anonymous namespace
 
 static bool tryPossibleName( string const & name, string & copyTo )
 {
-  if ( File::exists( name ) )
-  {
-    copyTo = name;
+    if ( File::exists( name ) )
+    {
+        copyTo = name;
 
-    return true;
-  }
-  else
+        return true;
+    }
+
     return false;
 }
 
 static void findCorrespondingFiles( string const & ifo,
                                     string & idx, string & dict, string & syn )
 {
-  string base( ifo, 0, ifo.size() - 3 );
+    string base( ifo, 0, ifo.size() - 3 );
 
-  if ( !(
-          tryPossibleName( base + "idx", idx ) ||
-          tryPossibleName( base + "idx.gz", idx ) ||
-          tryPossibleName( base + "idx.dz", idx ) ||
-          tryPossibleName( base + "IDX", idx ) ||
-          tryPossibleName( base + "IDX.GZ", idx ) ||
-          tryPossibleName( base + "IDX.DZ", idx )
-      ) )
-    throw exNoIdxFile( ifo );
+    if ( !(
+             tryPossibleName( base + "idx", idx ) ||
+             tryPossibleName( base + "idx.gz", idx ) ||
+             tryPossibleName( base + "idx.dz", idx ) ||
+             tryPossibleName( base + "IDX", idx ) ||
+             tryPossibleName( base + "IDX.GZ", idx ) ||
+             tryPossibleName( base + "IDX.DZ", idx )
+             ) )
+        throw exNoIdxFile( ifo );
 
-  if ( !(
-          tryPossibleName( base + "dict", dict ) ||
-          tryPossibleName( base + "dict.dz", dict ) ||
-          tryPossibleName( base + "DICT", dict ) ||
-          tryPossibleName( base + "dict.DZ", dict )
-      ) )
-    throw exNoDictFile( ifo );
+    if ( !(
+             tryPossibleName( base + "dict", dict ) ||
+             tryPossibleName( base + "dict.dz", dict ) ||
+             tryPossibleName( base + "DICT", dict ) ||
+             tryPossibleName( base + "dict.DZ", dict )
+             ) )
+        throw exNoDictFile( ifo );
 
-  if ( !(
-         tryPossibleName( base + "syn", syn ) ||
-         tryPossibleName( base + "syn.gz", syn ) ||
-         tryPossibleName( base + "syn.dz", syn ) ||
-         tryPossibleName( base + "SYN", syn ) ||
-         tryPossibleName( base + "SYN.GZ", syn ) ||
-         tryPossibleName( base + "SYN.DZ", syn )
-     ) )
-    syn.clear();
+    if ( !(
+             tryPossibleName( base + "syn", syn ) ||
+             tryPossibleName( base + "syn.gz", syn ) ||
+             tryPossibleName( base + "syn.dz", syn ) ||
+             tryPossibleName( base + "SYN", syn ) ||
+             tryPossibleName( base + "SYN.GZ", syn ) ||
+             tryPossibleName( base + "SYN.DZ", syn )
+             ) )
+        syn.clear();
 }
 
 static void handleIdxSynFile( string const & fileName,
@@ -886,281 +908,279 @@ static void handleIdxSynFile( string const & fileName,
                               vector< uint32_t > * articleOffsets,
                               bool isSynFile )
 {
-  gzFile stardictIdx = gzopen( fileName.c_str(), "rb" );
+    gzFile stardictIdx = gzopen( fileName.c_str(), "rb" );
 
-  if ( !stardictIdx )
-    throw exCantReadFile( fileName );
+    if ( !stardictIdx )
+        throw exCantReadFile( fileName );
 
-  vector< char > image;
+    vector< char > image;
 
-  for( ; ; )
-  {
-    size_t oldSize = image.size();
-
-    image.resize( oldSize + 65536 );
-
-    int rd = gzread( stardictIdx, &image.front() + oldSize, 65536 );
-
-    if ( rd < 0 )
+    for( ; ; )
     {
-      gzclose( stardictIdx );
-      throw exCantReadFile( fileName );
+        size_t oldSize = image.size();
+
+        image.resize( oldSize + 65536 );
+
+        int rd = gzread( stardictIdx, &image.front() + oldSize, 65536 );
+
+        if ( rd < 0 )
+        {
+            gzclose( stardictIdx );
+            throw exCantReadFile( fileName );
+        }
+
+        if ( rd != 65536 )
+        {
+            image.resize( oldSize + rd + 1 );
+            break;
+        }
     }
 
-    if ( rd != 65536 )
+    // We append one zero byte to catch runaway string at the end, if any
+
+    image.back() = 0;
+
+    // Now parse it
+
+    for( char const * ptr = &image.front(); ptr != &image.back(); )
     {
-      image.resize( oldSize + rd + 1 );
-      break;
-    }
-  }
+        size_t wordLen = strlen( ptr );
 
-  // We append one zero byte to catch runaway string at the end, if any
+        if ( ptr + wordLen + 1 + ( isSynFile ? sizeof( uint32_t ) :
+                                   sizeof( uint32_t ) * 2 ) >
+             &image.back() )
+        {
+            qWarning() << "Warning: sudden end of file: " << fileName.c_str();
+            break;
+        }
 
-  image.back() = 0;
+        char const * word = ptr;
 
-  // Now parse it
+        ptr += wordLen + 1;
 
-  for( char const * ptr = &image.front(); ptr != &image.back(); )
-  {
-    size_t wordLen = strlen( ptr );
+        uint32_t offset;
 
-    if ( ptr + wordLen + 1 + ( isSynFile ? sizeof( uint32_t ) :
-                                           sizeof( uint32_t ) * 2 ) >
-         &image.back() )
-    {
-      fprintf( stderr, "Warning: sudden end of file %s\n", fileName.c_str() );
-      break;
-    }
+        if ( !isSynFile )
+        {
+            // We're processing the .idx file
+            uint32_t articleOffset, articleSize;
 
-    char const * word = ptr;
+            memcpy( &articleOffset, ptr, sizeof( uint32_t ) );
+            ptr += sizeof( uint32_t );
+            memcpy( &articleSize, ptr, sizeof( uint32_t ) );
+            ptr += sizeof( uint32_t );
 
-    ptr += wordLen + 1;
+            articleOffset = ntohl( articleOffset );
+            articleSize = ntohl( articleSize );
 
-    uint32_t offset;
+            // Create an entry for the article in the chunked storage
 
-    if ( !isSynFile )
-    {
-      // We're processing the .idx file
-      uint32_t articleOffset, articleSize;
+            offset = chunks.startNewBlock();
 
-      memcpy( &articleOffset, ptr, sizeof( uint32_t ) );
-      ptr += sizeof( uint32_t );
-      memcpy( &articleSize, ptr, sizeof( uint32_t ) );
-      ptr += sizeof( uint32_t );
+            if ( articleOffsets )
+                articleOffsets->push_back( offset );
 
-      articleOffset = ntohl( articleOffset );
-      articleSize = ntohl( articleSize );
+            chunks.addToBlock( &articleOffset, sizeof( uint32_t ) );
+            chunks.addToBlock( &articleSize, sizeof( uint32_t ) );
+            chunks.addToBlock( word, wordLen + 1 );
+        }
+        else
+        {
+            // We're processing the .syn file
+            uint32_t offsetInIndex;
 
-      // Create an entry for the article in the chunked storage
+            memcpy( &offsetInIndex, ptr, sizeof( uint32_t ) );
+            ptr += sizeof( uint32_t );
 
-      offset = chunks.startNewBlock();
+            offsetInIndex = ntohl( offsetInIndex );
 
-      if ( articleOffsets )
-        articleOffsets->push_back( offset );
+            if ( offsetInIndex >= articleOffsets->size() )
+                throw exIncorrectOffset( fileName );
 
-      chunks.addToBlock( &articleOffset, sizeof( uint32_t ) );
-      chunks.addToBlock( &articleSize, sizeof( uint32_t ) );
-      chunks.addToBlock( word, wordLen + 1 );
-    }
-    else
-    {
-      // We're processing the .syn file
-      uint32_t offsetInIndex;
+            offset = (*articleOffsets)[ offsetInIndex ];
 
-      memcpy( &offsetInIndex, ptr, sizeof( uint32_t ) );
-      ptr += sizeof( uint32_t );
+            // Some StarDict dictionaries are in fact badly converted Babylon ones.
+            // They contain a lot of superfluous slashed entries with dollar signs.
+            // We try to filter them out here, since those entries become much more
+            // apparent in GoldenDict than they were in StarDict because of
+            // punctuation folding. Hopefully there are not a whole lot of valid
+            // synonyms which really start from slash and contain dollar signs, or
+            // end with dollar and contain slashes.
+            if ( *word == '/' )
+            {
+                if ( strchr( word, '$' ) )
+                    continue; // Skip this entry
+            }
+            else
+                if ( wordLen && word[ wordLen - 1 ] == '$' )
+                {
+                    if ( strchr( word, '/' ) )
+                        continue; // Skip this entry
+                }
+        }
 
-      offsetInIndex = ntohl( offsetInIndex );
+        // Insert new entry into an index
 
-      if ( offsetInIndex >= articleOffsets->size() )
-        throw exIncorrectOffset( fileName );
-
-      offset = (*articleOffsets)[ offsetInIndex ];
-
-      // Some StarDict dictionaries are in fact badly converted Babylon ones.
-      // They contain a lot of superfluous slashed entries with dollar signs.
-      // We try to filter them out here, since those entries become much more
-      // apparent in GoldenDict than they were in StarDict because of
-      // punctuation folding. Hopefully there are not a whole lot of valid
-      // synonyms which really start from slash and contain dollar signs, or
-      // end with dollar and contain slashes.
-      if ( *word == '/' )
-      {
-        if ( strchr( word, '$' ) )
-          continue; // Skip this entry
-      }
-      else
-      if ( wordLen && word[ wordLen - 1 ] == '$' )
-      {
-        if ( strchr( word, '/' ) )
-          continue; // Skip this entry
-      }
+        indexedWords.addWord( Utf8::decode( word ), offset );
     }
 
-    // Insert new entry into an index
-
-    indexedWords.addWord( Utf8::decode( word ), offset );
-  }
-
-  //printf( "%u entires made\n", indexedWords.size() );
+    //printf( "%u entires made\n", indexedWords.size() );
 }
 
 vector< sptr< Dictionary::Class > > makeDictionaries(
-                                      vector< string > const & fileNames,
-                                      string const & indicesDir,
-                                      Dictionary::Initializing & initializing )
-  throw( std::exception )
+        vector< string > const & fileNames,
+        string const & indicesDir,
+        Dictionary::Initializing & initializing )
 {
-  vector< sptr< Dictionary::Class > > dictionaries;
+    vector< sptr< Dictionary::Class > > dictionaries;
 
-  for( vector< string >::const_iterator i = fileNames.begin(); i != fileNames.end();
-       ++i )
-  {
-    if ( i->size() < 4 ||
-        strcasecmp( i->c_str() + ( i->size() - 4 ), ".ifo" ) != 0 )
-      continue;
-
-    try
+    for( const auto& fName : fileNames )
     {
-      vector< string > dictFiles( 1, *i );
+        if ( fName.size() < 4 ||
+             strcasecmp( fName.c_str() + ( fName.size() - 4 ), ".ifo" ) != 0 )
+            continue;
 
-      string idxFileName, dictFileName, synFileName;
-
-      findCorrespondingFiles( *i, idxFileName, dictFileName, synFileName );
-
-      dictFiles.push_back( idxFileName );
-      dictFiles.push_back( dictFileName );
-
-      if ( synFileName.size() )
-        dictFiles.push_back( synFileName );
-
-      string dictId = Dictionary::makeDictionaryId( dictFiles );
-
-      string indexFile = indicesDir + dictId;
-
-      if ( Dictionary::needToRebuildIndex( dictFiles, indexFile ) ||
-           indexIsOldOrBad( indexFile ) )
-      {
-        // Building the index
-
-        File::Class ifoFile( *i, "r" );
-
-        Ifo ifo( ifoFile );
-
-        if ( ifo.idxoffsetbits == 64 )
-          throw ex64BitsNotSupported();
-
-        if ( ifo.dicttype.size() )
-          throw exDicttypeNotSupported();
-
-        if( synFileName.empty() )
+        try
         {
-          if ( ifo.synwordcount )
-            throw exNoSynFile( *i );
+            vector< string > dictFiles( 1, fName );
+
+            string idxFileName, dictFileName, synFileName;
+
+            findCorrespondingFiles( fName, idxFileName, dictFileName, synFileName );
+
+            dictFiles.push_back( idxFileName );
+            dictFiles.push_back( dictFileName );
+
+            if ( !synFileName.empty() )
+                dictFiles.push_back( synFileName );
+
+            string dictId = Dictionary::makeDictionaryId( dictFiles );
+
+            string indexFile = indicesDir + dictId;
+
+            if ( Dictionary::needToRebuildIndex( dictFiles, indexFile ) ||
+                 indexIsOldOrBad( indexFile ) )
+            {
+                // Building the index
+
+                File::Class ifoFile( fName, "r" );
+
+                Ifo ifo( ifoFile );
+
+                if ( ifo.idxoffsetbits == 64 )
+                    throw ex64BitsNotSupported();
+
+                if ( !ifo.dicttype.empty() )
+                    throw exDicttypeNotSupported();
+
+                if( synFileName.empty() )
+                {
+                    if ( ifo.synwordcount )
+                        throw exNoSynFile( fName );
+                }
+                else
+                    if ( !ifo.synwordcount )
+                    {
+                        qWarning() << "Warning: ignoring .syn file, since there's no synwordcount in .ifo specified: "
+                                   << synFileName.c_str();
+                    }
+
+
+                //printf( "bookname = %s\n", ifo.bookname.c_str() );
+                //printf( "wordcount = %u\n", ifo.wordcount );
+
+                initializing.indexingDictionary( ifo.bookname );
+
+                File::Class idx( indexFile, "wb" );
+
+                IdxHeader idxHeader {};
+
+                memset( &idxHeader, 0, sizeof( idxHeader ) );
+
+                // We write a dummy header first. At the end of the process the header
+                // will be rewritten with the right values.
+
+                idx.write( idxHeader );
+
+                idx.write( ifo.bookname.data(), ifo.bookname.size() );
+                idx.write( ifo.sametypesequence.data(), ifo.sametypesequence.size() );
+
+                IndexedWords indexedWords;
+
+                ChunkedStorage::Writer chunks( idx );
+
+                // Load indices
+                if ( !ifo.synwordcount )
+                    handleIdxSynFile( idxFileName, indexedWords, chunks, nullptr, false );
+                else
+                {
+                    vector< uint32_t > articleOffsets;
+
+                    articleOffsets.reserve( ifo.wordcount );
+
+                    handleIdxSynFile( idxFileName, indexedWords, chunks, &articleOffsets,
+                                      false );
+
+                    handleIdxSynFile( synFileName, indexedWords, chunks, &articleOffsets,
+                                      true );
+                }
+
+                // Finish with the chunks
+
+                idxHeader.chunksOffset = chunks.finish();
+
+                // Build index
+
+                IndexInfo idxInfo = BtreeIndexing::buildIndex( indexedWords, idx );
+
+                idxHeader.indexBtreeMaxElements = idxInfo.btreeMaxElements;
+                idxHeader.indexRootOffset = idxInfo.rootOffset;
+
+                // That concludes it. Update the header.
+
+                idxHeader.signature = Signature;
+                idxHeader.formatVersion = CurrentFormatVersion;
+
+                idxHeader.wordCount = ifo.wordcount;
+                idxHeader.synWordCount = ifo.synwordcount;
+                idxHeader.bookNameSize = ifo.bookname.size();
+                idxHeader.sameTypeSequenceSize = ifo.sametypesequence.size();
+
+                // read languages
+                QPair<quint32,quint32> langs =
+                        LangCoder::findIdsForFilename( QString::fromStdString( dictFileName ) );
+
+                // if no languages found, try dictionary's name
+                if ( langs.first == 0 || langs.second == 0 )
+                {
+                    langs =
+                            LangCoder::findIdsForFilename( QString::fromStdString( ifo.bookname ) );
+                }
+
+                idxHeader.langFrom = langs.first;
+                idxHeader.langTo = langs.second;
+
+
+                idx.rewind();
+
+                idx.write( &idxHeader, sizeof( idxHeader ) );
+            }
+
+            dictionaries.push_back( new StardictDictionary( dictId,
+                                                            indexFile,
+                                                            dictFiles ) );
+
+            qInfo() << "Loaded: "<< dictionaries.back()->getName().c_str() << "(" <<
+                       dictionaries.back()->getWordCount() << ")";
         }
-        else
-        if ( !ifo.synwordcount )
+        catch( std::exception & e )
         {
-          printf( "Warning: ignoring .syn file %s, since there's no synwordcount in .ifo specified\n",
-                  synFileName.c_str() );
+            qWarning() << "Stardict's dictionary reading failed: "
+                       << fName.c_str() << " error: " << e.what();
         }
-
-
-        //printf( "bookname = %s\n", ifo.bookname.c_str() );
-        //printf( "wordcount = %u\n", ifo.wordcount );
-
-        initializing.indexingDictionary( ifo.bookname );
-
-        File::Class idx( indexFile, "wb" );
-
-        IdxHeader idxHeader;
-
-        memset( &idxHeader, 0, sizeof( idxHeader ) );
-
-        // We write a dummy header first. At the end of the process the header
-        // will be rewritten with the right values.
-
-        idx.write( idxHeader );
-
-        idx.write( ifo.bookname.data(), ifo.bookname.size() );
-        idx.write( ifo.sametypesequence.data(), ifo.sametypesequence.size() );
-
-        IndexedWords indexedWords;
-
-        ChunkedStorage::Writer chunks( idx );
-
-        // Load indices
-        if ( !ifo.synwordcount )
-          handleIdxSynFile( idxFileName, indexedWords, chunks, 0, false );
-        else
-        {
-          vector< uint32_t > articleOffsets;
-
-          articleOffsets.reserve( ifo.wordcount );
-
-          handleIdxSynFile( idxFileName, indexedWords, chunks, &articleOffsets,
-                            false );
-
-          handleIdxSynFile( synFileName, indexedWords, chunks, &articleOffsets,
-                            true );
-        }
-
-        // Finish with the chunks
-
-        idxHeader.chunksOffset = chunks.finish();
-
-        // Build index
-
-        IndexInfo idxInfo = BtreeIndexing::buildIndex( indexedWords, idx );
-
-        idxHeader.indexBtreeMaxElements = idxInfo.btreeMaxElements;
-        idxHeader.indexRootOffset = idxInfo.rootOffset;
-
-        // That concludes it. Update the header.
-
-        idxHeader.signature = Signature;
-        idxHeader.formatVersion = CurrentFormatVersion;
-
-        idxHeader.wordCount = ifo.wordcount;
-        idxHeader.synWordCount = ifo.synwordcount;
-        idxHeader.bookNameSize = ifo.bookname.size();
-        idxHeader.sameTypeSequenceSize = ifo.sametypesequence.size();
-
-        // read languages
-        QPair<quint32,quint32> langs =
-            LangCoder::findIdsForFilename( QString::fromStdString( dictFileName ) );
-
-        // if no languages found, try dictionary's name
-        if ( langs.first == 0 || langs.second == 0 )
-        {
-          langs =
-            LangCoder::findIdsForFilename( QString::fromStdString( ifo.bookname ) );
-        }
-
-        idxHeader.langFrom = langs.first;
-        idxHeader.langTo = langs.second;
-
-
-        idx.rewind();
-
-        idx.write( &idxHeader, sizeof( idxHeader ) );
-      }
-
-      dictionaries.push_back( new StardictDictionary( dictId,
-                                                      indexFile,
-                                                      dictFiles ) );
-
-      qInfo() << "Loaded: "<< dictionaries.back()->getName().c_str() << "(" <<
-                  dictionaries.back()->getWordCount() << ")";
     }
-    catch( std::exception & e )
-    {
-      fprintf( stderr, "Stardict's dictionary reading failed: %s, error: %s\n",
-        i->c_str(), e.what() );
-    }
-  }
 
-  return dictionaries;
+    return dictionaries;
 }
 
 

@@ -26,17 +26,6 @@ QString LangCoder::decode(quint32 code)
   return QString();
 }
 
-QIcon LangCoder::icon(quint32 code)
-{
-  if (langCoder.codeMap.contains(code))
-  {
-    const LangCode &lc = LangCodes[ langCoder.codeMap[ code ] ];
-    return QIcon( ":/flags/" + QString(lc.code) + ".png" );
-  }
-
-  return QIcon();
-}
-
 LangStruct LangCoder::langStruct(quint32 code)
 {
   LangStruct ls;
@@ -47,7 +36,6 @@ LangStruct LangCoder::langStruct(quint32 code)
     const LangCode &lc = LangCodes[order];
     ls.order = order;
     ls.lang = lc.lang;
-    ls.icon = QIcon(":/flags/" + QString(lc.code) + ".png");
   }
   return ls;
 }
@@ -115,7 +103,7 @@ quint32 LangCoder::guessId( const QString & lang )
   }
 
   // still not found - try to match by 2-symbol code
-  return code2toInt( lstr.left(2).toLatin1().data() );
+  return code2toInt( lstr.left(2).toLatin1().constData() );
 }
 
 QPair<quint32,quint32> LangCoder::findIdsForFilename( QString const & name )
@@ -137,87 +125,3 @@ QPair<quint32,quint32> LangCoder::findIdsForFilename( QString const & name )
 
   return QPair<quint32,quint32>(0, 0);
 }
-
-/*
-LangStruct& LangCoder::CodeToLangStruct(const QString &code)
-{
-  if (codeMap.contains(code)) {
-    LangStruct &ls = codeMap[code];
-    if (ls.icon.isNull() && *ls.icon_code) {
-      ls.icon = QIcon(":/Resources/flags/" + QString(ls.icon_code) + ".png");
-    }
-        return ls;
-  }
-
-    return dummyLS;
-}
-
-QString LangCoder::CodeToHtml(const QString &code)
-{
-  if (codeMap.contains(code)) {
-    LangStruct &ls = codeMap[code];
-    if (*ls.icon_code) {
-      return "<img src=':/Resources/flags/" + QString(ls.icon_code) + ".png'>&nbsp;" + ls.lang;
-    }
-        return ls.lang;
-  }
-
-    return "";
-}
-
-bool LangCoder::CheckCode(QString &code)
-{
-  code = code.toUpper();
-
-  if (codeMap.contains(code))
-    return true;
-
-  if (code == "DEU") {
-    code = "GER";
-    return true;
-  }
-
-  return false;
-}
-*/
-
-/*
-LangModel::LangModel(QObject * parent) : QAbstractItemModel(parent)
-{
-}
-
-int LangModel::columnCount ( const QModelIndex & parent ) const
-{
-  return 2;
-}
-
-int LangModel::rowCount ( const QModelIndex & parent ) const
-{
-  return arraySize(LangCodes);
-}
-
-QVariant LangModel::data ( const QModelIndex & index, int role ) const
-{
-  switch (role) {
-    case Qt::DisplayRole:
-      return LangCodes[index.row()].lang;
-
-    case LangCodeRole:
-      return LangCodes[index.row()].code;
-
-    default:;
-  }
-
-  return QVariant();
-}
-
-QModelIndex LangModel::index ( int row, int column, const QModelIndex & parent ) const
-{
-  return createIndex(row, column);
-}
-
-QModelIndex LangModel::parent ( const QModelIndex & index ) const
-{
-  return QModelIndex();
-}
-*/

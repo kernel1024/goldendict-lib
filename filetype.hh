@@ -17,10 +17,6 @@ bool isNameOfSound( string const & );
 /// Returns true if the name resembles the one of a picture file (i.e. ends
 /// with .jpg, .png and such).
 bool isNameOfPicture( string const & );
-/// Returns true if the name resembles the one of a .tiff file (i.e. ends
-/// with .tif or tiff). We have this one separately since we need to reconvert
-/// TIFF files as WebKit doesn't seem to support them.
-bool isNameOfTiff( string const & );
 
 }
 

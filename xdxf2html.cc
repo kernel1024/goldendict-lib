@@ -8,155 +8,157 @@ namespace Xdxf2Html {
 
 string convert( string const & in )
 {
-  //printf( "Source>>>>>>>>>>: %s\n\n\n", in.c_str() );
+    //printf( "Source>>>>>>>>>>: %s\n\n\n", in.c_str() );
 
-  // Convert spaces after each end of line to &nbsp;s, and then each end of
-  // line to a <br>
+    // Convert spaces after each end of line to &nbsp;s, and then each end of
+    // line to a <br>
 
-  string inConverted;
+    string inConverted;
 
-  inConverted.reserve( in.size() );
+    inConverted.reserve( in.size() );
 
-  bool afterEol = false;
+    bool afterEol = false;
 
-  for( string::const_iterator i = in.begin(), j = in.end(); i != j; ++i )
-  {
-    switch( *i )
+    for( const auto & c : in )
     {
-      case '\n':
-        afterEol = true;
-        inConverted.append( "<br/>" );
-      break;
-
-      case ' ':
-        if ( afterEol )
+        switch( c )
         {
-          inConverted.append( "&nbsp;" );
-          break;
+            case '\n':
+                afterEol = true;
+                inConverted.append( "<br/>" );
+                break;
+
+            case ' ':
+                if ( afterEol )
+                {
+                    inConverted.append( "&nbsp;" );
+                    break;
+                }
+                // Fall-through
+                [[clang::fallthrough]];
+            default:
+                inConverted.push_back( c );
+                afterEol = false;
         }
-        // Fall-through
-
-      default:
-        inConverted.push_back( *i );
-        afterEol = false;
     }
-  }
 
-  // We build a dom representation of the given xml, then do some transforms
-  QDomDocument dd;
+    // We build a dom representation of the given xml, then do some transforms
+    QDomDocument dd;
 
-  QString errorStr;
-  int errorLine, errorColumn;
+    QString errorStr;
+    int errorLine, errorColumn;
 
-  if ( !dd.setContent( QByteArray( ( "<div class=\"sdct_x\">" + inConverted + "</div>" ).c_str() ), false, &errorStr, &errorLine, &errorColumn  ) )
-  {
-    fprintf( stderr, "Xdxf2html error, xml parse failed: %s at %d,%d\n", errorStr.toLocal8Bit().constData(),  errorLine,  errorColumn );
-    fprintf( stderr, "The input was: %s\n", in.c_str() );
-
-    return in;
-  }
-
-  QDomNodeList nodes = dd.elementsByTagName( "ex" ); // Example
-
-  while( nodes.size() )
-  {
-    QDomElement el = nodes.at( 0 ).toElement();
-
-    el.setTagName( "span" );
-    el.setAttribute( "class", "xdxf_ex" );
-  }
-
-  nodes = dd.elementsByTagName( "k" ); // Key
-
-  while( nodes.size() )
-  {
-    QDomElement el = nodes.at( 0 ).toElement();
-
-    el.setTagName( "span" );
-    el.setAttribute( "class", "xdxf_k" );
-  }
-
-
-  nodes = dd.elementsByTagName( "kref" ); // Reference to another word
-
-  while( nodes.size() )
-  {
-    QDomElement el = nodes.at( 0 ).toElement();
-
-    el.setTagName( "a" );
-    el.setAttribute( "href", QString( "bword:" ) + el.text() );
-    el.setAttribute( "class", "xdxf_kref" );
-  }
-
-  nodes = dd.elementsByTagName( "abr" ); // Abbreviation
-
-  while( nodes.size() )
-  {
-    QDomElement el = nodes.at( 0 ).toElement();
-
-    el.setTagName( "span" );
-    el.setAttribute( "class", "xdxf_abr" );
-  }
-
-  nodes = dd.elementsByTagName( "dtrn" ); // Direct translation
-
-  while( nodes.size() )
-  {
-    QDomElement el = nodes.at( 0 ).toElement();
-
-    el.setTagName( "span" );
-    el.setAttribute( "class", "xdxf_dtrn" );
-  }
-
-  nodes = dd.elementsByTagName( "c" ); // Color
-
-  while( nodes.size() )
-  {
-    QDomElement el = nodes.at( 0 ).toElement();
-
-    el.setTagName( "font" );
-    el.setAttribute( "class", "xdxf_c" );
-
-    if ( el.hasAttribute( "c" ) )
+    if ( !dd.setContent( QByteArray( ( "<div class=\"sdct_x\">" + inConverted + "</div>" ).c_str() ), false, &errorStr, &errorLine, &errorColumn  ) )
     {
-      el.setAttribute( "color", el.attribute( "c" ) );
-      el.removeAttribute( "c" );
+        qWarning() << "Xdxf2html error, xml parse failed: " << errorStr << " at "
+                   << errorLine << errorColumn;
+        qWarning() << "The input was: " << in.c_str();
+
+        return in;
     }
-  }
 
-  nodes = dd.elementsByTagName( "co" ); // Editorial comment
+    QDomNodeList nodes = dd.elementsByTagName( "ex" ); // Example
 
-  while( nodes.size() )
-  {
-    QDomElement el = nodes.at( 0 ).toElement();
+    while( nodes.size() )
+    {
+        QDomElement el = nodes.at( 0 ).toElement();
 
-    el.setTagName( "span" );
-    el.setAttribute( "class", "xdxf_co" );
-  }
+        el.setTagName( "span" );
+        el.setAttribute( "class", "xdxf_ex" );
+    }
 
-  nodes = dd.elementsByTagName( "tr" ); // Transcription
+    nodes = dd.elementsByTagName( "k" ); // Key
 
-  while( nodes.size() )
-  {
-    QDomElement el = nodes.at( 0 ).toElement();
+    while( nodes.size() )
+    {
+        QDomElement el = nodes.at( 0 ).toElement();
 
-    el.setTagName( "span" );
-    el.setAttribute( "class", "xdxf_tr" );
-  }
+        el.setTagName( "span" );
+        el.setAttribute( "class", "xdxf_k" );
+    }
 
-  nodes = dd.elementsByTagName( "rref" ); // Resource reference
 
-  // We don't really know how to handle this at the moment, so we'll just
-  // convert it to a span and leave it as is for now.
-  while( nodes.size() )
-  {
-    QDomElement el = nodes.at( 0 ).toElement();
+    nodes = dd.elementsByTagName( "kref" ); // Reference to another word
 
-    el.setTagName( "span" );
-    el.setAttribute( "class", "xdxf_rref" );
-  }
+    while( nodes.size() )
+    {
+        QDomElement el = nodes.at( 0 ).toElement();
 
-  return dd.toByteArray().data();
+        el.setTagName( "a" );
+        el.setAttribute( "href", QString( "bword:" ) + el.text() );
+        el.setAttribute( "class", "xdxf_kref" );
+    }
+
+    nodes = dd.elementsByTagName( "abr" ); // Abbreviation
+
+    while( nodes.size() )
+    {
+        QDomElement el = nodes.at( 0 ).toElement();
+
+        el.setTagName( "span" );
+        el.setAttribute( "class", "xdxf_abr" );
+    }
+
+    nodes = dd.elementsByTagName( "dtrn" ); // Direct translation
+
+    while( nodes.size() )
+    {
+        QDomElement el = nodes.at( 0 ).toElement();
+
+        el.setTagName( "span" );
+        el.setAttribute( "class", "xdxf_dtrn" );
+    }
+
+    nodes = dd.elementsByTagName( "c" ); // Color
+
+    while( nodes.size() )
+    {
+        QDomElement el = nodes.at( 0 ).toElement();
+
+        el.setTagName( "font" );
+        el.setAttribute( "class", "xdxf_c" );
+
+        if ( el.hasAttribute( "c" ) )
+        {
+            el.setAttribute( "color", el.attribute( "c" ) );
+            el.removeAttribute( "c" );
+        }
+    }
+
+    nodes = dd.elementsByTagName( "co" ); // Editorial comment
+
+    while( nodes.size() )
+    {
+        QDomElement el = nodes.at( 0 ).toElement();
+
+        el.setTagName( "span" );
+        el.setAttribute( "class", "xdxf_co" );
+    }
+
+    nodes = dd.elementsByTagName( "tr" ); // Transcription
+
+    while( nodes.size() )
+    {
+        QDomElement el = nodes.at( 0 ).toElement();
+
+        el.setTagName( "span" );
+        el.setAttribute( "class", "xdxf_tr" );
+    }
+
+    nodes = dd.elementsByTagName( "rref" ); // Resource reference
+
+    // We don't really know how to handle this at the moment, so we'll just
+    // convert it to a span and leave it as is for now.
+    while( nodes.size() )
+    {
+        QDomElement el = nodes.at( 0 ).toElement();
+
+        el.setTagName( "span" );
+        el.setAttribute( "class", "xdxf_rref" );
+    }
+
+    string res(dd.toByteArray().constData());
+    return res;
 }
 
 }

@@ -1,7 +1,7 @@
 #ifndef LANGCODER_H
 #define LANGCODER_H
 
-#include <QtGui>
+#include <QtCore>
 #include "wstring.hh"
 
 struct LangCode
@@ -212,7 +212,6 @@ struct LangStruct
 {
   int order;
   quint32 code;
-  QIcon icon;
   QString lang;
 };
 
@@ -239,8 +238,6 @@ public:
 
   /// Returns decoded name of language or empty string if not found.
   static QString decode(quint32 code);
-  /// Returns icon for language or empty string if not found.
-  static QIcon icon(quint32 code);
 
   //const QMap<quint32, int>& codes() { return codeMap; }
 
@@ -255,26 +252,8 @@ private:
 //	LangStruct dummyLS;
 };
 
-//extern LangCoder langCoder;
-
 ///////////////////////////////////////////////////////////////////////////////
 
 #define LangCodeRole	Qt::UserRole
-
-/*
-class LangModel : public QAbstractItemModel
-{
-public:
-  LangModel(QObject * parent = 0);
-
-  virtual int columnCount ( const QModelIndex & parent = QModelIndex(}, const;
-  virtual int rowCount ( const QModelIndex & parent = QModelIndex(}, const;
-
-  virtual QVariant data ( const QModelIndex & index, int role = Qt::DisplayRole ) const;
-
-  virtual QModelIndex index ( int row, int column, const QModelIndex & parent = QModelIndex(}, const;
-  virtual QModelIndex parent ( const QModelIndex & index ) const;
-};
-*/
 
 #endif // LANGCODER_H

@@ -2,7 +2,8 @@
  * Part of GoldenDict. Licensed under GPLv3 or later, see the LICENSE file */
 
 #include "filetype.hh"
-#include <ctype.h>
+#include "utf8.hh"
+#include <cctype>
 
 namespace Filetype {
 
@@ -18,13 +19,16 @@ string simplifyString( string const & str )
 
   size_t beginPos = 0;
 
-  while( beginPos < str.size() && isspace( str[ beginPos ] ) )
+  while( beginPos < str.size() && Utf8::isspace( str[ beginPos ] ) )
     ++beginPos;
 
   size_t endPos = str.size();
 
-  while( endPos && isspace( str[ endPos - 1 ] ) )
+  while( endPos && Utf8::isspace( str[ endPos - 1 ] ) )
     --endPos;
+
+  if( endPos <= beginPos )
+      return string();
 
   result.reserve( endPos - beginPos );
 
@@ -53,7 +57,7 @@ bool isNameOfSound( string const & name )
     endsWith( s, ".voc" ) ||
     endsWith( s, ".ogg" ) ||
     endsWith( s, ".mp3" ) ||
-    endsWith( s, ".mp4" ) ||
+    endsWith( s, ".m4a" ) ||
     endsWith( s, ".aac" ) ||
     endsWith( s, ".flac" ) ||
     endsWith( s, ".mid" ) ||
@@ -61,7 +65,8 @@ bool isNameOfSound( string const & name )
     endsWith( s, ".mpc" ) ||
     endsWith( s, ".wma" ) ||
     endsWith( s, ".wv" ) ||
-    endsWith( s, ".ape" );
+    endsWith( s, ".ape" ) ||
+    endsWith( s, ".spx" );
 }
 
 bool isNameOfPicture( string const & name )
@@ -81,15 +86,6 @@ bool isNameOfPicture( string const & name )
     endsWith( s, ".pcx" ) ||
     endsWith( s, ".ico" ) ||
     endsWith( s, ".svg" );
-}
-
-bool isNameOfTiff( string const & name )
-{
-  string s = simplifyString( name );
-
-  return
-    endsWith( s, ".tif" ) ||
-    endsWith( s, ".tiff" );
 }
 
 }

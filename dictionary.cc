@@ -15,6 +15,7 @@
 //#include "config.hh"
 #include <QDir>
 #include <QFileInfo>
+#include "fsencoding.hh"
 
 namespace Dictionary {
 
@@ -63,7 +64,7 @@ size_t WordSearchRequest::matchesCount()
   return matches.size();
 }
 
-WordMatch WordSearchRequest::operator [] ( size_t index ) throw( exIndexOutOfRange )
+WordMatch WordSearchRequest::operator [] ( size_t index )
 {
   Mutex::Lock _( dataMutex );
   
@@ -73,7 +74,7 @@ WordMatch WordSearchRequest::operator [] ( size_t index ) throw( exIndexOutOfRan
   return matches[ index ];
 }
 
-vector< WordMatch > & WordSearchRequest::getAllMatches() throw( exRequestUnfinished )
+vector< WordMatch > & WordSearchRequest::getAllMatches()
 {
   if ( !isFinished() )
     throw exRequestUnfinished();
@@ -91,7 +92,6 @@ long DataRequest::dataSize()
 }
 
 void DataRequest::getDataSlice( size_t offset, size_t size, void * buffer )
-  throw( exSliceOutOfRange )
 {
   Mutex::Lock _( dataMutex );
 
@@ -101,7 +101,7 @@ void DataRequest::getDataSlice( size_t offset, size_t size, void * buffer )
   memcpy( buffer, &data[ offset ], size );
 }
 
-vector< char > & DataRequest::getFullData() throw( exRequestUnfinished )
+vector< char > & DataRequest::getFullData()
 {
   if ( !isFinished() )
     throw exRequestUnfinished();
@@ -122,31 +122,27 @@ sptr< WordSearchRequest > Class::stemmedMatch( wstring const & /*str*/,
                                                unsigned /*minLength*/,
                                                unsigned /*maxSuffixVariation*/,
                                                unsigned long /*maxResults*/ )
-  throw( std::exception )
 {
   return new WordSearchRequestInstant();
 }
 
 sptr< WordSearchRequest > Class::findHeadwordsForSynonym( wstring const & )
-  throw( std::exception )
 {
   return new WordSearchRequestInstant();
 }
 
 vector< wstring > Class::getAlternateWritings( wstring const & )
-  throw()
 {
   return vector< wstring >();
 }
 
 sptr< DataRequest > Class::getResource( string const & /*name*/ )
-  throw( std::exception )
 {
   return new DataRequestInstant( false );
 }
 
 
-string makeDictionaryId( vector< string > const & dictionaryFiles ) throw()
+string makeDictionaryId( vector< string > const & dictionaryFiles )
 {
   std::vector< string > sortedList;
 
@@ -160,7 +156,7 @@ string makeDictionaryId( vector< string > const & dictionaryFiles ) throw()
        i != sortedList.end(); ++i )
     hash.addData( i->c_str(), i->size() + 1 );
 
-  return hash.result().toHex().data();
+  return hash.result().toHex().constData();
 }
 
 // While this file is not supposed to have any Qt stuff since it's used by
@@ -168,30 +164,33 @@ string makeDictionaryId( vector< string > const & dictionaryFiles ) throw()
 // of a timestamp of the file, so we use here Qt anyway. It is supposed to
 // be fixed in the future when it's needed.
 bool needToRebuildIndex( vector< string > const & dictionaryFiles,
-                         string const & indexFile ) throw()
+                         string const & indexFile )
 {
-  unsigned long lastModified = 0;
+  qint64 lastModified = 0;
 
-  for( std::vector< string >::const_iterator i = dictionaryFiles.begin();
-       i != dictionaryFiles.end(); ++i )
+  for( const auto & dict : dictionaryFiles )
   {
-    QFileInfo fileInfo( QString::fromLocal8Bit( i->c_str() ) );
+    QString name = FsEncoding::decode( dict.c_str() );
+    QFileInfo fileInfo( name );
+
+    if ( fileInfo.isDir() )
+      continue;
 
     if ( !fileInfo.exists() )
       return true;
 
-    unsigned long ts = fileInfo.lastModified().toTime_t();
+    qint64 ts = fileInfo.lastModified().toSecsSinceEpoch();
 
     if ( ts > lastModified )
       lastModified = ts;
   }
 
-  QFileInfo fileInfo( QString::fromLocal8Bit( indexFile.c_str() ) );
+  QFileInfo fileInfo( FsEncoding::decode( indexFile.c_str() ) );
 
   if ( !fileInfo.exists() )
     return true;
 
-  return fileInfo.lastModified().toTime_t() < lastModified;
+  return fileInfo.lastModified().toSecsSinceEpoch() < lastModified;
 }
 
 }

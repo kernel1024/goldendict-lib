@@ -2,15 +2,12 @@
  * Part of GoldenDict. Licensed under GPLv3 or later, see the LICENSE file */
 
 #include "chunkedstorage.hh"
+#include <cstring>
+#include <cstdint>
+
+extern "C" {
 #include <zlib.h>
-#include <string.h>
-
-#ifdef _MSC_VER
-#include <stdint_msvc.h>
-#else
-#include <stdint.h>
-#endif
-
+}
 
 namespace ChunkedStorage {
 
@@ -109,7 +106,7 @@ uint32_t Writer::finish()
 
   file.write( (uint32_t) offsets.size() );
 
-  if ( offsets.size() )
+  if ( !offsets.empty() )
     file.write( &offsets.front(), offsets.size() * sizeof( uint32_t ) );
 
   if ( useScratchPad )
@@ -125,7 +122,10 @@ Reader::Reader( File::Class & f, uint32_t offset ): file( f )
 {
   file.seek( offset );
 
-  offsets.resize( file.read< uint32_t >() );
+  auto size =  file.read< uint32_t >();
+  if ( size == 0 )
+    return;
+  offsets.resize( size );
   file.read( &offsets.front(), offsets.size() * sizeof( uint32_t ) );
 }
 
@@ -140,8 +140,8 @@ char * Reader::getBlock( uint32_t address, vector< char > & chunk )
   {
     file.seek( offsets[ chunkIdx ] );
 
-    uint32_t uncompressedSize = file.read< uint32_t >();
-    uint32_t compressedSize = file.read< uint32_t >();
+    auto uncompressedSize = file.read< uint32_t >();
+    auto compressedSize = file.read< uint32_t >();
 
     chunk.resize( uncompressedSize );
 

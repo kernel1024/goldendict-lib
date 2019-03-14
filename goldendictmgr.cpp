@@ -19,6 +19,7 @@
 #include "folding.hh"
 #include "utf8.hh"
 #include "romaji.hh"
+#include "fsencoding.hh"
 
 #include <QString>
 #include <QUrl>
@@ -30,14 +31,13 @@ using std::vector;
 using std::string;
 using gd::wstring;
 using std::set;
-using std::list;
 
 namespace
 {
-  /// Uses some heuristics to chop off the first domain name from the host name,
-  /// but only if it's not too base. Returns the resulting host name.
-  QString getHostBase( QUrl const & url )
-  {
+/// Uses some heuristics to chop off the first domain name from the host name,
+/// but only if it's not too base. Returns the resulting host name.
+QString getHostBase( QUrl const & url )
+{
     QString host = url.host();
 
     QStringList domains = host.split( '.' );
@@ -46,22 +46,22 @@ namespace
 
     // Skip last <=3-letter domain name
     if ( left && domains[ left - 1 ].size() <= 3 )
-      --left;
+        --left;
 
     // Skip another <=3-letter domain name
     if ( left && domains[ left - 1 ].size() <= 3 )
-      --left;
+        --left;
 
     if ( left > 1 )
     {
-      // We've got something like www.foobar.co.uk -- we can chop off the first
-      // domain
+        // We've got something like www.foobar.co.uk -- we can chop off the first
+        // domain
 
-      return host.mid( domains[ 0 ].size() + 1 );
+        return host.mid( domains[ 0 ].size() + 1 );
     }
-    else
-      return host;
-  }
+
+    return host;
+}
 }
 
 CGoldenDictMgr::CGoldenDictMgr(QObject *parent) :
@@ -81,7 +81,7 @@ sptr<Dictionary::DataRequest> CGoldenDictMgr::makeDefinitionFor(const QString &i
 sptr<Dictionary::DataRequest> CGoldenDictMgr::makeNotFoundTextFor(const QString &word) const
 {
     string result = makeHtmlHeader( word ) + makeNotFoundBody( word ) +
-      "</body></html>";
+                    "</body></html>";
 
     sptr< Dictionary::DataRequestInstant > r = new Dictionary::DataRequestInstant( true );
 
@@ -94,10 +94,10 @@ sptr<Dictionary::DataRequest> CGoldenDictMgr::makeNotFoundTextFor(const QString 
 sptr<Dictionary::DataRequest> CGoldenDictMgr::makeEmptyPage() const
 {
     string result = makeHtmlHeader( QString( "(untitled)" ) ) +
-      "</body></html>";
+                    "</body></html>";
 
     sptr< Dictionary::DataRequestInstant > r =
-        new Dictionary::DataRequestInstant( true );
+            new Dictionary::DataRequestInstant( true );
 
     r->getData().resize( result.size() );
     memcpy( &( r->getData().front() ), result.data(), result.size() );
@@ -125,11 +125,11 @@ std::string CGoldenDictMgr::makeNotFoundBody(const QString &word)
     string result( "<div class=\"gdnotfound\"><p>" );
 
     if ( word.size() )
-      result += QString( "No translation for <b>%1</b> was found." ).
-                arg( QString::fromUtf8( Html::escape( word.toUtf8().data() ).c_str() ) ).
-                toUtf8().data();
+        result += QString( "No translation for <b>%1</b> was found." ).
+                  arg( QString::fromUtf8( Html::escape( word.toUtf8().constData() ).c_str() ) ).
+                  toUtf8().constData();
     else
-      result += QString( "No translation was found." ).toUtf8().data();
+        result += QString( "No translation was found." ).toUtf8().constData();
 
     result += "</p></div>";
 
@@ -140,20 +140,20 @@ std::string CGoldenDictMgr::makeNotFoundBody(const QString &word)
 std::string CGoldenDictMgr::makeHtmlHeader(const QString &word) const
 {
     string result =
-      "<!DOCTYPE html PUBLIC \"-//W3C//DTD XHTML 1.0 Transitional//EN\" \"http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd\">"
-      "<html><head>"
-      "<meta http-equiv=\"Content-Type\" content=\"text/html; charset=utf-8\">";
+            "<!DOCTYPE html PUBLIC \"-//W3C//DTD XHTML 1.0 Transitional//EN\" \"http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd\">"
+            "<html><head>"
+            "<meta http-equiv=\"Content-Type\" content=\"text/html; charset=utf-8\">";
 
     // Add a css stylesheet
 
     {
-      QFile builtInCssFile( ":/data/article-style.css" );
-      builtInCssFile.open( QFile::ReadOnly );
-      QByteArray css = builtInCssFile.readAll();
+        QFile builtInCssFile( ":/data/article-style.css" );
+        builtInCssFile.open( QFile::ReadOnly );
+        QByteArray css = builtInCssFile.readAll();
 
-      result += "<style type=\"text/css\" media=\"all\">\n";
-      result += css.data();
-      result += "</style>\n";
+        result += "<style type=\"text/css\" media=\"all\">\n";
+        result += css.constData();
+        result += "</style>\n";
     }
 
     result += "<title>" + Html::escape( Utf8::encode( gd::toWString( word ) ) ) + "</title>";
@@ -177,22 +177,22 @@ void CGoldenDictMgr::loadDictionaries(const QStringList& dictPaths, const QStrin
 
     m_dictIndexDir = dictIndexDir;
 
-    CDictLoader *loadDicts = new CDictLoader(this, dictPaths, dictIndexDir);
+    auto loadDicts = new CDictLoader(this, dictPaths, dictIndexDir);
 
-    QObject::connect( loadDicts, SIGNAL( indexingDictionarySignal( QString const & ) ),
-                      this, SLOT(showMessage(QString)) );
+    QObject::connect( loadDicts, &CDictLoader::indexingDictionarySignal,
+                      this, &CGoldenDictMgr::showMessage );
 
-    QObject::connect( loadDicts, SIGNAL( finished() ),
-                      this, SLOT( loadDone() ));
+    QObject::connect( loadDicts, &CDictLoader::finished,
+                      this, &CGoldenDictMgr::loadDone );
 
     loadDicts->start();
 }
 
 void CGoldenDictMgr::loadDone()
 {
-    CDictLoader* loadDicts = qobject_cast<CDictLoader *>(sender());
+    auto loadDicts = qobject_cast<CDictLoader *>(sender());
 
-    if (loadDicts==NULL) {
+    if (loadDicts==nullptr) {
         qCritical() << "Unexpected call for loadDone.";
         showMessage(QString("ERROR: Unexpected call for loadDone. Dictionaries unavailable!"));
         return;
@@ -203,7 +203,7 @@ void CGoldenDictMgr::loadDone()
     showMessage(QString());
 
 
-    if ( loadDicts->getExceptionText().size() )
+    if ( !loadDicts->getExceptionText().empty() )
     {
         emit showCriticalMessage(QString("Error loading dictionaries %1").
                                  arg(QString::fromUtf8( loadDicts->getExceptionText().c_str() ) ));
@@ -226,7 +226,7 @@ void CGoldenDictMgr::loadDone()
     std::set< std::string > ids;
 
     for( unsigned x = dictionaries.size(); x--; )
-      ids.insert( dictionaries[ x ]->getId() );
+        ids.insert( dictionaries[ x ]->getId() );
 
     QDir indexDir( m_dictIndexDir );
 
@@ -235,9 +235,9 @@ void CGoldenDictMgr::loadDone()
     for( QStringList::const_iterator i = allIdxFiles.constBegin();
          i != allIdxFiles.constEnd(); ++i )
     {
-      if ( ids.find( i->toLocal8Bit().data() ) == ids.end() &&
-           i->size() == 32 )
-        indexDir.remove( *i );
+        if ( ids.find( i->toLocal8Bit().data() ) == ids.end() &&
+             i->size() == 32 )
+            indexDir.remove( *i );
     }
 
     loadDicts->deleteLater();
@@ -270,7 +270,7 @@ void CDictLoader::run()
     }
 }
 
-void CDictLoader::indexingDictionary(const std::string &dictionaryName) throw()
+void CDictLoader::indexingDictionary(const std::string &dictionaryName)
 {
     QString msg = QString("Indexing dictionary: %1").arg(QString::fromUtf8(dictionaryName.c_str()));
     emit indexingDictionarySignal( msg );
@@ -285,828 +285,839 @@ void CDictLoader::handlePath(const QString &path, bool recursive)
     QFileInfoList entries = dir.entryInfoList( nameFilters,
                                                QDir::AllDirs | QDir::Files | QDir::NoDotAndDotDot );
 
-    for( QFileInfoList::const_iterator i = entries.constBegin();
-         i != entries.constEnd(); ++i )
+    for( const auto & fi : entries )
     {
-      QString fullName = i->canonicalFilePath();
+        const QString fullName = fi.canonicalFilePath();
 
-      if ( recursive && i->isDir() )
-      {
-        // Make sure the path doesn't look like with dsl resources
-        if ( !fullName.endsWith( ".dsl.files", Qt::CaseInsensitive ) &&
-             !fullName.endsWith( ".dsl.dz.files", Qt::CaseInsensitive ) )
-          handlePath( fullName, true );
-      }
+        if ( recursive && fi.isDir() )
+        {
+            // Make sure the path doesn't look like with dsl resources
+            if ( !fullName.endsWith( ".dsl.files", Qt::CaseInsensitive ) &&
+                 !fullName.endsWith( ".dsl.dz.files", Qt::CaseInsensitive ) )
+                handlePath( fullName, true );
+        }
 
-      allFiles.push_back( QDir::toNativeSeparators( fullName ).toLocal8Bit().data() );
+        allFiles.emplace_back( FsEncoding::encode(QDir::toNativeSeparators(fullName )) );
     }
 
     {
-      std::vector< sptr< Dictionary::Class > > stardictDictionaries =
-        Stardict::makeDictionaries( allFiles, m_dictIndexDir.toLocal8Bit().data(), *this );
+        std::vector< sptr< Dictionary::Class > > stardictDictionaries =
+                Stardict::makeDictionaries( allFiles, FsEncoding::encode(m_dictIndexDir), *this );
 
-      dictionaries.insert( dictionaries.end(), stardictDictionaries.begin(),
-                           stardictDictionaries.end() );
+        dictionaries.insert( dictionaries.end(), stardictDictionaries.cbegin(),
+                             stardictDictionaries.cend() );
     }
 
     {
-      std::vector< sptr< Dictionary::Class > > dslDictionaries =
-        Dsl::makeDictionaries( allFiles, m_dictIndexDir.toLocal8Bit().data(), *this );
+        std::vector< sptr< Dictionary::Class > > dslDictionaries =
+                Dsl::makeDictionaries( allFiles, FsEncoding::encode(m_dictIndexDir), *this );
 
-      dictionaries.insert( dictionaries.end(), dslDictionaries.begin(),
-                           dslDictionaries.end() );
+        dictionaries.insert( dictionaries.end(), dslDictionaries.cbegin(),
+                             dslDictionaries.cend() );
     }
 
     {
-      std::vector< sptr< Dictionary::Class > > dictdDictionaries =
-        DictdFiles::makeDictionaries( allFiles, m_dictIndexDir.toLocal8Bit().data(), *this );
+        std::vector< sptr< Dictionary::Class > > dictdDictionaries =
+                DictdFiles::makeDictionaries( allFiles, FsEncoding::encode(m_dictIndexDir), *this );
 
-      dictionaries.insert( dictionaries.end(), dictdDictionaries.begin(),
-                           dictdDictionaries.end() );
+        dictionaries.insert( dictionaries.end(), dictdDictionaries.cbegin(),
+                             dictdDictionaries.cend() );
     }
 }
 
 //////// ArticleRequest
 
 ArticleRequest::ArticleRequest(
-  QString const & word_, QString const & group_,
-  QMap< QString, QString > const & contexts_,
-  vector< sptr< Dictionary::Class > > const & activeDicts_,
-  string const & header ):
+        QString const & word_, QString const & group_,
+        QMap< QString, QString > const & contexts_,
+        vector< sptr< Dictionary::Class > > const & activeDicts_,
+        string const & header ):
     word( word_ ), group( group_ ), contexts( contexts_ ),
     activeDicts( activeDicts_ ),
     altsDone( false ), bodyDone( false ), foundAnyDefinitions( false ),
-    closePrevSpan( false )
+    closePrevSpan( false ),
+    currentSplittedWordStart( 0 ),
+    currentSplittedWordEnd( 0 ),
+    firstCompoundWasFound( false )
 {
-  // No need to lock dataMutex on construction
+    // No need to lock dataMutex on construction
 
-  hasAnyData = true;
+    hasAnyData = true;
 
-  data.resize( header.size() );
-  memcpy( &data.front(), header.data(), header.size() );
+    data.resize( header.size() );
+    memcpy( &data.front(), header.data(), header.size() );
 
-  // Accumulate main forms
+    // Accumulate main forms
 
-  for( unsigned x = 0; x < activeDicts.size(); ++x )
-  {
-    sptr< Dictionary::WordSearchRequest > s = activeDicts[ x ]->findHeadwordsForSynonym( gd::toWString( word ) );
+    for( const auto & dict : activeDicts )
+    {
+        sptr< Dictionary::WordSearchRequest > s = dict->findHeadwordsForSynonym( gd::toWString( word ) );
 
-    connect( s.get(), SIGNAL( finished() ),
-             this, SLOT( altSearchFinished() ) );
+        connect( s.get(), &Dictionary::WordSearchRequest::finished,
+                 this, &ArticleRequest::altSearchFinished );
 
-    altSearches.push_back( s );
-  }
+        altSearches.push_back( s );
+    }
 
-  altSearchFinished(); // Handle any ones which have already finished
+    altSearchFinished(); // Handle any ones which have already finished
 }
 
 void ArticleRequest::altSearchFinished()
 {
-  if ( altsDone )
-    return;
+    if ( altsDone )
+        return;
 
-  // Check every request for finishing
-  for( list< sptr< Dictionary::WordSearchRequest > >::iterator i =
-         altSearches.begin(); i != altSearches.end(); )
-  {
-    if ( (*i)->isFinished() )
+    // Check every request for finishing
+    for( auto i = altSearches.begin(); i != altSearches.end(); )
     {
-      // This one's finished
-      for( size_t count = (*i)->matchesCount(), x = 0; x < count; ++x )
-        alts.insert( (**i)[ x ].word );
+        if ( (*i)->isFinished() )
+        {
+            // This one's finished
+            for( size_t count = (*i)->matchesCount(), x = 0; x < count; ++x )
+                alts.insert( (**i)[ x ].word );
 
-      altSearches.erase( i++ );
-    }
-    else
-      ++i;
-  }
-
-  if ( altSearches.empty() )
-  {
-    //printf( "alts finished\n" );
-
-    // They all've finished! Now we can look up bodies
-
-    altsDone = true; // So any pending signals in queued mode won't mess us up
-
-    vector< wstring > altsVector( alts.begin(), alts.end() );
-
-    for( unsigned x = 0; x < altsVector.size(); ++x )
-    {
-      //printf( "Alt: %ls\n", altsVector[ x ].c_str() );
+            altSearches.erase( i++ );
+        }
+        else
+            ++i;
     }
 
-    wstring wordStd = gd::toWString( word );
-
-    for( unsigned x = 0; x < activeDicts.size(); ++x )
+    if ( altSearches.empty() )
     {
-      sptr< Dictionary::DataRequest > r =
-        activeDicts[ x ]->getArticle( wordStd, altsVector,
-                                      gd::toWString( contexts.value( QString::fromStdString( activeDicts[ x ]->getId() ) ) ) );
+        //printf( "alts finished\n" );
 
-      connect( r.get(), SIGNAL( finished() ),
-               this, SLOT( bodyFinished() ) );
+        // They all've finished! Now we can look up bodies
 
-      bodyRequests.push_back( r );
+        altsDone = true; // So any pending signals in queued mode won't mess us up
+
+        vector< wstring > altsVector( alts.begin(), alts.end() );
+
+        for( unsigned x = 0; x < altsVector.size(); ++x )
+        {
+            //printf( "Alt: %ls\n", altsVector[ x ].c_str() );
+        }
+
+        wstring wordStd = gd::toWString( word );
+
+        for( const auto & dict : activeDicts )
+        {
+            sptr< Dictionary::DataRequest > r =
+                    dict->getArticle( wordStd, altsVector,
+                                      gd::toWString( contexts.value(
+                                                         QString::fromStdString( dict->getId() ) ) ) );
+
+            connect( r.get(), &Dictionary::DataRequest::finished,
+                     this, &ArticleRequest::bodyFinished );
+
+            bodyRequests.push_back( r );
+        }
+
+        bodyFinished(); // Handle any ones which have already finished
     }
-
-    bodyFinished(); // Handle any ones which have already finished
-  }
 }
 
 void ArticleRequest::bodyFinished()
 {
-  if ( bodyDone )
-    return;
+    if ( bodyDone )
+        return;
 
-  //printf( "some body finished\n" );
+    //printf( "some body finished\n" );
 
-  bool wasUpdated = false;
+    bool wasUpdated = false;
 
-  while ( bodyRequests.size() )
-  {
-    // Since requests should go in order, check the first one first
-    if ( bodyRequests.front()->isFinished() )
+    while ( !bodyRequests.empty() )
     {
-      // Good
-
-      //printf( "one finished.\n" );
-
-      Dictionary::DataRequest & req = *bodyRequests.front();
-
-      QString errorString = req.getErrorString();
-
-      if ( req.dataSize() >= 0 || errorString.size() )
-      {
-        sptr< Dictionary::Class > const & activeDict =
-            activeDicts[ activeDicts.size() - bodyRequests.size() ];
-
-        string dictId = activeDict->getId();
-
-        string head;
-
-        string gdFrom = "gdfrom-" + Html::escape( dictId );
-
-        if ( closePrevSpan )
+        // Since requests should go in order, check the first one first
+        if ( bodyRequests.front()->isFinished() )
         {
-          head += "</span></span><span class=\"gdarticleseparator\"></span>";
+            // Good
+
+            //printf( "one finished.\n" );
+
+            Dictionary::DataRequest & req = *bodyRequests.front();
+
+            QString errorString = req.getErrorString();
+
+            if ( req.dataSize() >= 0 || errorString.size() )
+            {
+                sptr< Dictionary::Class > const & activeDict =
+                        activeDicts[ activeDicts.size() - bodyRequests.size() ];
+
+                string dictId = activeDict->getId();
+
+                string head;
+
+                string gdFrom = "gdfrom-" + Html::escape( dictId );
+
+                if ( closePrevSpan )
+                {
+                    head += "</span></span><span class=\"gdarticleseparator\"></span>";
+                }
+                else
+                {
+                    // This is the first article
+                    head += "<script language=\"JavaScript\">"
+                            "var gdCurrentArticle=\"" + gdFrom  + "\";</script>";
+                }
+
+                string jsVal = Html::escapeForJavaScript( dictId );
+                head += "<script language=\"JavaScript\">var gdArticleContents; ";
+                head += "if ( !gdArticleContents ) gdArticleContents = \"";
+                head += jsVal;
+                head += " \"; else gdArticleContents += \"";
+                head += jsVal;
+                head += " \";</script>";
+
+                head += string( "<span class=\"gdarticle" );
+                if ( !closePrevSpan )
+                    head += " gdactivearticle";
+                head += "\" id=\"";
+                head += gdFrom;
+                head += "\" onClick=\"gdMakeArticleActive( '";
+                head += jsVal;
+                head += "' );\" onContextMenu=\"gdMakeArticleActive( '";
+                head += jsVal;
+                head += "' );\">";
+
+                closePrevSpan = true;
+
+                head += string( "<div class=\"gddictname\"><span class=\"gdfromprefix\">" );
+                head += Html::escape( QString( "From " ).toUtf8().constData() );
+                head += "</span>";
+                head += Html::escape( activeDict->getName() );
+
+                head += "</div><span class=\"gdarticlebody gdlangfrom-";
+                head += LangCoder::intToCode2( activeDict->getLangFrom() ).toLatin1().constData();
+                head += "\" lang=\"";
+                head += LangCoder::intToCode2( activeDict->getLangTo() ).toLatin1().constData();
+                head += "\">";
+
+                if ( errorString.size() )
+                {
+                    head += "<div class=\"gderrordesc\">";
+                    head += Html::escape( QString( "Query error: %1" )
+                                          .arg( errorString ).toUtf8().constData() );
+                    head += "</div>";
+                }
+
+                Mutex::Lock _( dataMutex );
+
+                size_t offset = data.size();
+
+                data.resize( data.size() + head.size() + ( req.dataSize() > 0 ? req.dataSize() : 0 ) );
+
+                memcpy( &data.front() + offset, head.data(), head.size() );
+
+                if ( req.dataSize() > 0 )
+                    bodyRequests.front()->getDataSlice( 0, req.dataSize(),
+                                                        &data.front() + offset + head.size() );
+
+                wasUpdated = true;
+
+                foundAnyDefinitions = true;
+            }
+            //printf( "erasing..\n" );
+            bodyRequests.pop_front();
+            //printf( "erase done..\n" );
         }
         else
         {
-          // This is the first article
-          head += "<script language=\"JavaScript\">"
-                  "var gdCurrentArticle=\"" + gdFrom  + "\";</script>";
+            //printf( "one not finished.\n" );
+            break;
         }
+    }
 
-        string jsVal = Html::escapeForJavaScript( dictId );
-        head += "<script language=\"JavaScript\">var gdArticleContents; "
-          "if ( !gdArticleContents ) gdArticleContents = \"" + jsVal +" \"; "
-          "else gdArticleContents += \"" + jsVal + " \";</script>";
+    if ( bodyRequests.empty() )
+    {
+        // No requests left, end the article
 
-        head += string( "<span class=\"gdarticle" ) +
-                ( closePrevSpan ? "" : " gdactivearticle" ) +
-                "\" id=\"" + gdFrom +
-                "\" onClick=\"gdMakeArticleActive( '" + jsVal + "' );\" " +
-                " onContextMenu=\"gdMakeArticleActive( '" + jsVal + "' );\""
-                + ">";
+        bodyDone = true;
 
-        closePrevSpan = true;
-
-        head += string( "<div class=\"gddictname\"><span class=\"gdfromprefix\">" ) +
-          Html::escape( QString( "From " ).toUtf8().data() ) + "</span>" +
-          Html::escape( activeDict->getName().c_str() )
-           + "</div>";
-
-        head += "<span class=\"gdarticlebody gdlangfrom-";
-        head += LangCoder::intToCode2( activeDict->getLangFrom() ).toLatin1().data();
-        head += "\" lang=\"";
-        head += LangCoder::intToCode2( activeDict->getLangTo() ).toLatin1().data();
-        head += "\">";
-
-        if ( errorString.size() )
         {
-          head += "<div class=\"gderrordesc\">" +
-            Html::escape( QString( "Query error: %1" ).arg( errorString ).toUtf8().data() )
-          + "</div>";
+            string footer;
+
+            if ( closePrevSpan )
+            {
+                footer += "</span></span>";
+                closePrevSpan = false;
+            }
+
+            if ( !foundAnyDefinitions )
+            {
+                // No definitions were ever found, say so to the user.
+
+                // Larger words are usually whole sentences - don't clutter the ouput
+                // with their full bodies.
+                footer += CGoldenDictMgr::makeNotFoundBody( word.size() < 40 ? word : "" );
+
+                // When there were no definitions, we run stemmed search.
+                stemmedWordFinder = new WordFinder( this );
+
+                connect( stemmedWordFinder.get(), &WordFinder::finished,
+                         this, &ArticleRequest::stemmedSearchFinished, Qt::QueuedConnection );
+
+                stemmedWordFinder->stemmedMatch( word, activeDicts );
+            }
+            else
+            {
+                footer += "</body></html>";
+            }
+
+            Mutex::Lock _( dataMutex );
+
+            size_t offset = data.size();
+
+            data.resize( data.size() + footer.size() );
+
+            memcpy( &data.front() + offset, footer.data(), footer.size() );
         }
 
-        Mutex::Lock _( dataMutex );
-
-        size_t offset = data.size();
-
-        data.resize( data.size() + head.size() + ( req.dataSize() > 0 ? req.dataSize() : 0 ) );
-
-        memcpy( &data.front() + offset, head.data(), head.size() );
-
-        if ( req.dataSize() > 0 )
-          bodyRequests.front()->getDataSlice( 0, req.dataSize(),
-                                              &data.front() + offset + head.size() );
-
-        wasUpdated = true;
-
-        foundAnyDefinitions = true;
-      }
-      //printf( "erasing..\n" );
-      bodyRequests.pop_front();
-      //printf( "erase done..\n" );
+        if ( stemmedWordFinder )
+            update();
+        else
+            finish();
     }
     else
-    {
-        //printf( "one not finished.\n" );
-        break;
-    }
-  }
-
-  if ( bodyRequests.empty() )
-  {
-    // No requests left, end the article
-
-    bodyDone = true;
-
-    {
-      string footer;
-
-      if ( closePrevSpan )
-      {
-        footer += "</span></span>";
-        closePrevSpan = false;
-      }
-
-      if ( !foundAnyDefinitions )
-      {
-        // No definitions were ever found, say so to the user.
-
-        // Larger words are usually whole sentences - don't clutter the ouput
-        // with their full bodies.
-        footer += CGoldenDictMgr::makeNotFoundBody( word.size() < 40 ? word : "" );
-
-        // When there were no definitions, we run stemmed search.
-        stemmedWordFinder = new WordFinder( this );
-
-        connect( stemmedWordFinder.get(), SIGNAL( finished() ),
-                 this, SLOT( stemmedSearchFinished() ), Qt::QueuedConnection );
-
-        stemmedWordFinder->stemmedMatch( word, activeDicts );
-      }
-      else
-      {
-        footer += "</body></html>";
-      }
-
-      Mutex::Lock _( dataMutex );
-
-      size_t offset = data.size();
-
-      data.resize( data.size() + footer.size() );
-
-      memcpy( &data.front() + offset, footer.data(), footer.size() );
-    }
-
-    if ( stemmedWordFinder.get() )
-      update();
-    else
-      finish();
-  }
-  else
-  if ( wasUpdated )
-    update();
+        if ( wasUpdated )
+            update();
 }
 
 void ArticleRequest::stemmedSearchFinished()
 {
-  // Got stemmed matching results
+    // Got stemmed matching results
 
-  WordFinder::SearchResults sr = stemmedWordFinder->getResults();
+    WordFinder::SearchResults sr = stemmedWordFinder->getResults();
 
-  string footer;
+    string footer;
 
-  bool continueMatching = false;
+    bool continueMatching = false;
 
-  if ( sr.size() )
-  {
-    footer += "<div class=\"gdstemmedsuggestion\"><span class=\"gdstemmedsuggestion_head\">" +
-      Html::escape( QString( "Close words: " ).toUtf8().data() ) +
-      "</span><span class=\"gdstemmedsuggestion_body\">";
-
-    for( unsigned x = 0; x < sr.size(); ++x )
+    if ( !sr.empty() )
     {
-      footer += linkWord( sr[ x ].first );
+        footer += "<div class=\"gdstemmedsuggestion\"><span class=\"gdstemmedsuggestion_head\">" +
+                  Html::escape( QString( "Close words: " ).toUtf8().constData() ) +
+                  "</span><span class=\"gdstemmedsuggestion_body\">";
 
-      if ( x != sr.size() - 1 )
-      {
-        footer += ", ";
-      }
+        for( unsigned x = 0; x < sr.size(); ++x )
+        {
+            footer += linkWord( sr[ x ].first );
+
+            if ( x != sr.size() - 1 )
+            {
+                footer += ", ";
+            }
+        }
+
+        footer += "</span></div>";
     }
 
-    footer += "</span></div>";
-  }
+    splittedWords = splitIntoWords( word );
 
-  splittedWords = splitIntoWords( word );
+    if ( splittedWords.first.size() > 1 ) // Contains more than one word
+    {
+        disconnect( stemmedWordFinder.get(), &WordFinder::finished,
+                    this, &ArticleRequest::stemmedSearchFinished );
 
-  if ( splittedWords.first.size() > 1 ) // Contains more than one word
-  {
-    disconnect( stemmedWordFinder.get(), SIGNAL( finished() ),
-                this, SLOT( stemmedSearchFinished() ) );
+        connect( stemmedWordFinder.get(), &WordFinder::finished,
+                 this, &ArticleRequest::individualWordFinished, Qt::QueuedConnection );
 
-    connect( stemmedWordFinder.get(), SIGNAL( finished() ),
-             this, SLOT( individualWordFinished() ), Qt::QueuedConnection );
+        currentSplittedWordStart = -1;
+        currentSplittedWordEnd = currentSplittedWordStart;
 
-    currentSplittedWordStart = -1;
-    currentSplittedWordEnd = currentSplittedWordStart;
+        firstCompoundWasFound = false;
 
-    firstCompoundWasFound = false;
+        compoundSearchNextStep( false );
 
-    compoundSearchNextStep( false );
+        continueMatching = true;
+    }
 
-    continueMatching = true;
-  }
+    if ( !continueMatching )
+        footer += "</body></html>";
 
-  if ( !continueMatching )
-    footer += "</body></html>";
+    {
+        Mutex::Lock _( dataMutex );
 
-  {
-    Mutex::Lock _( dataMutex );
+        size_t offset = data.size();
 
-    size_t offset = data.size();
+        data.resize( data.size() + footer.size() );
 
-    data.resize( data.size() + footer.size() );
+        memcpy( &data.front() + offset, footer.data(), footer.size() );
+    }
 
-    memcpy( &data.front() + offset, footer.data(), footer.size() );
-  }
-
-  if ( continueMatching )
-    update();
-  else
-    finish();
+    if ( continueMatching )
+        update();
+    else
+        finish();
 }
 
 void ArticleRequest::compoundSearchNextStep( bool lastSearchSucceeded )
 {
-  if ( !lastSearchSucceeded )
-  {
-    // Last search was unsuccessful. First, emit what we had.
-
-    string footer;
-
-    if ( lastGoodCompoundResult.size() ) // We have something to append
+    if ( !lastSearchSucceeded )
     {
-//      printf( "Appending\n" );
+        // Last search was unsuccessful. First, emit what we had.
 
-      if ( !firstCompoundWasFound )
-      {
-        // Append the beginning
-        footer += "<div class=\"gdstemmedsuggestion\"><span class=\"gdstemmedsuggestion_head\">" +
-          Html::escape( QString( "Compound expressions: " ).toUtf8().data() ) +
-          "</span><span class=\"gdstemmedsuggestion_body\">";
+        string footer;
 
-        firstCompoundWasFound = true;
-      }
-      else
-      {
-        // Append the separator
-        footer += " / ";
-      }
+        if ( lastGoodCompoundResult.size() ) // We have something to append
+        {
+            //      printf( "Appending\n" );
 
-      footer += linkWord( lastGoodCompoundResult );
+            if ( !firstCompoundWasFound )
+            {
+                // Append the beginning
+                footer += "<div class=\"gdstemmedsuggestion\"><span class=\"gdstemmedsuggestion_head\">" +
+                          Html::escape( QString( "Compound expressions: " ).toUtf8().constData() ) +
+                          "</span><span class=\"gdstemmedsuggestion_body\">";
 
-      lastGoodCompoundResult.clear();
-    }
+                firstCompoundWasFound = true;
+            }
+            else
+            {
+                // Append the separator
+                footer += " / ";
+            }
 
-    // Then, start a new search for the next word, if possible
+            footer += linkWord( lastGoodCompoundResult );
 
-    if ( currentSplittedWordStart >= splittedWords.first.size() - 2 )
-    {
-      // The last word was the last possible to start from
+            lastGoodCompoundResult.clear();
+        }
 
-      if ( firstCompoundWasFound )
-        footer += "</span>";
+        // Then, start a new search for the next word, if possible
 
-      // Now add links to all the individual words. They conclude the result.
+        if ( currentSplittedWordStart >= splittedWords.first.size() - 2 )
+        {
+            // The last word was the last possible to start from
 
-      footer += "<div class=\"gdstemmedsuggestion\"><span class=\"gdstemmedsuggestion_head\">" +
-        Html::escape( QString( "Individual words: " ).toUtf8().data() ) +
-        "</span><span class=\"gdstemmedsuggestion_body\">";
+            if ( firstCompoundWasFound )
+                footer += "</span>";
 
-      footer += escapeSpacing( splittedWords.second[ 0 ] );
+            // Now add links to all the individual words. They conclude the result.
 
-      for( int x = 0; x < splittedWords.first.size(); ++x )
-      {
-        footer += linkWord( splittedWords.first[ x ] );
-        footer += escapeSpacing( splittedWords.second[ x + 1 ] );
-      }
+            footer += "<div class=\"gdstemmedsuggestion\"><span class=\"gdstemmedsuggestion_head\">" +
+                      Html::escape( QString( "Individual words: " ).toUtf8().constData() ) +
+                      "</span><span class=\"gdstemmedsuggestion_body\">";
 
-      footer += "</span>";
+            footer += escapeSpacing( splittedWords.second[ 0 ] );
 
-      footer += "</body></html>";
+            for( int x = 0; x < splittedWords.first.size(); ++x )
+            {
+                footer += linkWord( splittedWords.first[ x ] );
+                footer += escapeSpacing( splittedWords.second[ x + 1 ] );
+            }
 
-      appendToData( footer );
+            footer += "</span>";
 
-      finish();
+            footer += "</body></html>";
 
-      return;
-    }
+            appendToData( footer );
 
-    if ( footer.size() )
-    {
-      appendToData( footer );
-      update();
-    }
+            finish();
 
-    // Advance to the next word and start from looking up two words
-    ++currentSplittedWordStart;
-    currentSplittedWordEnd = currentSplittedWordStart + 1;
-  }
-  else
-  {
-    // Last lookup succeeded -- see if we can try the larger sequence
+            return;
+        }
 
-    if ( currentSplittedWordEnd < splittedWords.first.size() - 1 )
-    {
-      // We can, indeed.
-      ++currentSplittedWordEnd;
+        if ( !footer.empty() )
+        {
+            appendToData( footer );
+            update();
+        }
+
+        // Advance to the next word and start from looking up two words
+        ++currentSplittedWordStart;
+        currentSplittedWordEnd = currentSplittedWordStart + 1;
     }
     else
     {
-      // We can't. Emit what we have and start over.
+        // Last lookup succeeded -- see if we can try the larger sequence
 
-      ++currentSplittedWordEnd; // So we could use the same code for result
-                                // emitting
+        if ( currentSplittedWordEnd < splittedWords.first.size() - 1 )
+        {
+            // We can, indeed.
+            ++currentSplittedWordEnd;
+        }
+        else
+        {
+            // We can't. Emit what we have and start over.
 
-      // Initiate new lookup
-      compoundSearchNextStep( false );
+            ++currentSplittedWordEnd; // So we could use the same code for result
+            // emitting
 
-      return;
+            // Initiate new lookup
+            compoundSearchNextStep( false );
+
+            return;
+        }
     }
-  }
 
-  // Build the compound sequence
+    // Build the compound sequence
 
-  currentSplittedWordCompound = makeSplittedWordCompound();
+    currentSplittedWordCompound = makeSplittedWordCompound();
 
-  // Look it up
+    // Look it up
 
-//  printf( "Looking up %s\n", qPrintable( currentSplittedWordCompound ) );
+    //  printf( "Looking up %s\n", qPrintable( currentSplittedWordCompound ) );
 
-  stemmedWordFinder->prefixMatch( currentSplittedWordCompound, activeDicts, 40, // Would one be enough? Leave 40 to be safe.
-                                  Dictionary::SuitableForCompoundSearching );
+    stemmedWordFinder->prefixMatch( currentSplittedWordCompound, activeDicts, 40, // Would one be enough? Leave 40 to be safe.
+                                    Dictionary::SuitableForCompoundSearching );
 }
 
 QString ArticleRequest::makeSplittedWordCompound()
 {
-  QString result;
+    QString result;
 
-  result.clear();
+    result.clear();
 
-  for( int x = currentSplittedWordStart; x <= currentSplittedWordEnd; ++x )
-  {
-    result.append( splittedWords.first[ x ] );
-
-    if ( x < currentSplittedWordEnd )
+    for( int x = currentSplittedWordStart; x <= currentSplittedWordEnd; ++x )
     {
-      wstring ws( gd::toWString( splittedWords.second[ x + 1 ] ) );
+        result.append( splittedWords.first[ x ] );
 
-      Folding::normalizeWhitespace( ws );
+        if ( x < currentSplittedWordEnd )
+        {
+            wstring ws( gd::toWString( splittedWords.second[ x + 1 ] ) );
 
-      result.append( gd::toQString( ws ) );
+            Folding::normalizeWhitespace( ws );
+
+            result.append( gd::toQString( ws ) );
+        }
     }
-  }
 
-  return result;
+    return result;
 }
 
 void ArticleRequest::individualWordFinished()
 {
-  WordFinder::SearchResults const & results = stemmedWordFinder->getResults();
+    WordFinder::SearchResults const & results = stemmedWordFinder->getResults();
 
-  if ( results.size() )
-  {
-    // Check if the aliases are acceptable
-    wstring source = Folding::applySimpleCaseOnly( gd::toWString( currentSplittedWordCompound ) );
-
-    bool hadSomething = false;
-
-    for( unsigned x = 0; x < results.size(); ++x )
+    if ( !results.empty() )
     {
-      if ( results[ x ].second )
-        continue; // We're not interested in suggestions
+        // Check if the aliases are acceptable
+        wstring source = Folding::applySimpleCaseOnly( gd::toWString( currentSplittedWordCompound ) );
 
-      wstring result( Folding::applySimpleCaseOnly( gd::toWString( results[ x ].first ) ) );
+        bool hadSomething = false;
 
-      if ( source.size() <= result.size() && result.compare( 0, source.size(), source ) == 0 )
-      {
-        // The resulting string begins with the source one
-
-        hadSomething = true;
-
-        if ( source.size() == result.size() )
+        for( const auto & res : results )
         {
-          // Got the match. No need to continue.
-          lastGoodCompoundResult = currentSplittedWordCompound;
-          break;
+            if ( res.second )
+                continue; // We're not interested in suggestions
+
+            wstring result( Folding::applySimpleCaseOnly( gd::toWString( res.first ) ) );
+
+            if ( source.size() <= result.size() && result.compare( 0, source.size(), source ) == 0 )
+            {
+                // The resulting string begins with the source one
+
+                hadSomething = true;
+
+                if ( source.size() == result.size() )
+                {
+                    // Got the match. No need to continue.
+                    lastGoodCompoundResult = currentSplittedWordCompound;
+                    break;
+                }
+            }
         }
-      }
+
+        if ( hadSomething )
+        {
+            compoundSearchNextStep( true );
+            return;
+        }
     }
 
-    if ( hadSomething )
-    {
-      compoundSearchNextStep( true );
-      return;
-    }
-  }
-
-  compoundSearchNextStep( false );
+    compoundSearchNextStep( false );
 }
 
 void ArticleRequest::appendToData( std::string const & str )
 {
-  Mutex::Lock _( dataMutex );
+    Mutex::Lock _( dataMutex );
 
-  size_t offset = data.size();
+    size_t offset = data.size();
 
-  data.resize( data.size() + str.size() );
+    data.resize( data.size() + str.size() );
 
-  memcpy( &data.front() + offset, str.data(), str.size() );
+    memcpy( &data.front() + offset, str.data(), str.size() );
 
 }
 
 QPair< ArticleRequest::Words, ArticleRequest::Spacings > ArticleRequest::splitIntoWords( QString const & input )
 {
-  QPair< Words, Spacings > result;
+    QPair< Words, Spacings > result;
 
-  QChar const * ptr = input.data();
+    QChar const * ptr = input.data();
 
-  for( ; ; )
-  {
-    QString spacing;
+    for( ; ; )
+    {
+        QString spacing;
 
-    for( ; ptr->unicode() && ( Folding::isPunct( ptr->unicode() ) || Folding::isWhitespace( ptr->unicode() ) ); ++ptr )
-      spacing.append( *ptr );
+        for( ; ptr->unicode() && ( Folding::isPunct( ptr->unicode() ) || Folding::isWhitespace( ptr->unicode() ) ); ++ptr )
+            spacing.append( *ptr );
 
-    result.second.append( spacing );
+        result.second.append( spacing );
 
-    QString word;
+        QString word;
 
-    for( ; ptr->unicode() && !( Folding::isPunct( ptr->unicode() ) || Folding::isWhitespace( ptr->unicode() ) ); ++ptr )
-      word.append( *ptr );
+        for( ; ptr->unicode() && !( Folding::isPunct( ptr->unicode() ) || Folding::isWhitespace( ptr->unicode() ) ); ++ptr )
+            word.append( *ptr );
 
-    if ( word.isEmpty() )
-      break;
+        if ( word.isEmpty() )
+            break;
 
-    result.first.append( word );
-  }
+        result.first.append( word );
+    }
 
-  return result;
+    return result;
 }
 
 string ArticleRequest::linkWord( QString const & str )
 {
-  QUrl url;
+    QUrl url;
 
-  url.setScheme( "gdlookup" );
-  url.setHost( "localhost" );
-  QUrlQuery requ;
-  requ.addQueryItem( "word", str );
-  url.setQuery(requ);
+    url.setScheme( "gdlookup" );
+    url.setHost( "localhost" );
+    QUrlQuery requ;
+    requ.addQueryItem( "word", str );
+    url.setQuery(requ);
+    string sUrl(url.toEncoded().constData());
 
-  string escapedResult = Html::escape( str.toUtf8().data() );
-  return string( "<a href=\"" ) + url.toEncoded().data() + "\">" + escapedResult +"</a>";
+    string escapedResult = Html::escape( str.toUtf8().constData() );
+    return string( "<a href=\"" ) + sUrl + "\">" + escapedResult +"</a>";
 }
 
 std::string ArticleRequest::escapeSpacing( QString const & str )
 {
-  QByteArray spacing = Html::escape( str.toUtf8().data() ).c_str();
+    QByteArray spacing = Html::escape( str.toUtf8().constData() ).c_str();
 
-  spacing.replace( "\n", "<br>" );
+    spacing.replace( "\n", "<br>" );
 
-  return spacing.data();
+    return std::string(spacing.constData());
 }
 
 QNetworkReply * ArticleNetworkAccessManager::createRequest( Operation op,
                                                             QNetworkRequest const & req,
                                                             QIODevice * outgoingData )
 {
-  if ( op == GetOperation )
-  {
-    if ( req.url().scheme() == "qrcx" )
+    if ( op == GetOperation )
     {
-      // We have to override the local load policy for the qrc scheme, hence
-      // we use qrcx and redirect it here back to qrc
-      QUrl newUrl( req.url() );
+        if ( req.url().scheme() == "qrcx" )
+        {
+            // We have to override the local load policy for the qrc scheme, hence
+            // we use qrcx and redirect it here back to qrc
+            QUrl newUrl( req.url() );
 
-      newUrl.setScheme( "qrc" );
-      newUrl.setHost( "" );
+            newUrl.setScheme( "qrc" );
+            newUrl.setHost( "" );
 
-      QNetworkRequest newReq( req );
-      newReq.setUrl( newUrl );
+            QNetworkRequest newReq( req );
+            newReq.setUrl( newUrl );
 
-      return QNetworkAccessManager::createRequest( op, newReq, outgoingData );
+            return QNetworkAccessManager::createRequest( op, newReq, outgoingData );
+        }
+
+        QString contentType;
+
+        sptr< Dictionary::DataRequest > dr = getResource( req.url(), contentType );
+
+        if ( dr.get() )
+            return new ArticleResourceReply( this, req, dr, contentType );
     }
 
-    QString contentType;
-
-    sptr< Dictionary::DataRequest > dr = getResource( req.url(), contentType );
-
-    if ( dr.get() )
-      return new ArticleResourceReply( this, req, dr, contentType );
-  }
-
-  if ( req.hasRawHeader( "Referer" ) )
-  {
-    QByteArray referer = req.rawHeader( "Referer" );
-
-    QUrl refererUrl = QUrl::fromEncoded( referer );
-
-    if ( !req.url().host().endsWith( refererUrl.host() ) &&
-         getHostBase( req.url() ) != getHostBase( refererUrl ) )
+    if ( req.hasRawHeader( "Referer" ) )
     {
-      //printf( "Blocking element %s\n", req.url().toEncoded().data() );
+        QByteArray referer = req.rawHeader( "Referer" );
 
-      return new BlockedNetworkReply( this );
+        QUrl refererUrl = QUrl::fromEncoded( referer );
+
+        if ( !req.url().host().endsWith( refererUrl.host() ) &&
+             getHostBase( req.url() ) != getHostBase( refererUrl ) )
+        {
+            //printf( "Blocking element %s\n", req.url().toEncoded().data() );
+
+            return new BlockedNetworkReply( this );
+        }
     }
-  }
 
-  return QNetworkAccessManager::createRequest( op, req, outgoingData );
+    return QNetworkAccessManager::createRequest( op, req, outgoingData );
 }
 
 sptr< Dictionary::DataRequest > ArticleNetworkAccessManager::getResource(
-  QUrl const & url, QString & contentType )
+        QUrl const & url, QString & contentType )
 {
-  //printf( "getResource: %ls\n", url.toString().toStdWString().c_str() );
-  //printf( "scheme: %ls\n", url.scheme().toStdWString().c_str() );
-  //printf( "host: %ls\n", url.host().toStdWString().c_str() );
+    //printf( "getResource: %ls\n", url.toString().toStdWString().c_str() );
+    //printf( "scheme: %ls\n", url.scheme().toStdWString().c_str() );
+    //printf( "host: %ls\n", url.host().toStdWString().c_str() );
 
-  if ( url.scheme() == "gdlookup" )
-  {
-    contentType = "text/html";
-
-    QMap< QString, QString > contexts;
-    QString word, contextsEncoded;
-
-    QUrlQuery qr(url);
-    if ( qr.queryItemValue( "blank" ) == "1" )
-        return dictMgr->makeEmptyPage();
-
-    word = qr.queryItemValue( "word" );
-
-    contextsEncoded = qr.queryItemValue( "contexts" );
-
-    // Unpack contexts
-
-    if ( contextsEncoded.size() )
+    if ( url.scheme() == "gdlookup" )
     {
-      QByteArray ba = QByteArray::fromBase64( contextsEncoded.toLatin1() );
+        contentType = "text/html";
 
-      QBuffer buf( & ba );
+        QMap< QString, QString > contexts;
+        QString word, contextsEncoded;
 
-      buf.open( QBuffer::ReadOnly );
+        QUrlQuery qr(url);
+        if ( qr.queryItemValue( "blank" ) == "1" )
+            return dictMgr->makeEmptyPage();
 
-      QDataStream stream( &buf );
+        word = qr.queryItemValue( "word" );
 
-      stream >> contexts;
+        contextsEncoded = qr.queryItemValue( "contexts" );
+
+        // Unpack contexts
+
+        if ( contextsEncoded.size() )
+        {
+            QByteArray ba = QByteArray::fromBase64( contextsEncoded.toLatin1() );
+
+            QBuffer buf( & ba );
+
+            buf.open( QBuffer::ReadOnly );
+
+            QDataStream stream( &buf );
+
+            stream >> contexts;
+        }
+
+        if ( word.size() ) // Require group and word to be passed
+            return dictMgr->makeDefinitionFor( word, contexts );
     }
 
-    if ( word.size() ) // Require group and word to be passed
-      return dictMgr->makeDefinitionFor( word, contexts );
-  }
-
-  if ( ( url.scheme() == "bres" || url.scheme() == "gdau" ) &&
-       url.path().size() )
-  {
-    //printf( "Get %s\n", req.url().host().toLocal8Bit().data() );
-    //printf( "Get %s\n", req.url().path().toLocal8Bit().data() );
-
-    string id = url.host().toStdString();
-
-    bool search = ( id == "search" );
-
-    if ( !search )
+    if ( ( url.scheme() == "bres" || url.scheme() == "gdau" ) &&
+         url.path().size() )
     {
-      for( unsigned x = 0; x < dictMgr->dictionaries.size(); ++x )
-        if ( dictMgr->dictionaries[ x ]->getId() == id )
-          return  dictMgr->dictionaries[ x ]->getResource( url.path().mid( 1 ).toUtf8().data() );
-    }
-    else
-    {
-      // We don't do search requests for now
-    }
-  }
+        //printf( "Get %s\n", req.url().host().toLocal8Bit().data() );
+        //printf( "Get %s\n", req.url().path().toLocal8Bit().data() );
 
-  return sptr< Dictionary::DataRequest >();
+        string id = url.host().toStdString();
+
+        bool search = ( id == "search" );
+
+        if ( !search )
+        {
+            for( auto &dict : dictMgr->dictionaries )
+                if ( dict->getId() == id )
+                    return  dict->getResource( url.path().mid( 1 ).toUtf8().constData() );
+        }
+        else
+        {
+            // We don't do search requests for now
+        }
+    }
+
+    return sptr< Dictionary::DataRequest >();
 }
 
 ArticleResourceReply::ArticleResourceReply( QObject * parent,
-  QNetworkRequest const & netReq,
-  sptr< Dictionary::DataRequest > const & req_,
-  QString const & contentType ):
-  QNetworkReply( parent ), req( req_ ), alreadyRead( 0 )
+                                            QNetworkRequest const & netReq,
+                                            sptr< Dictionary::DataRequest > const & req_,
+                                            QString const & contentType ):
+    QNetworkReply( parent ), req( req_ ), alreadyRead( 0 )
 {
-  setRequest( netReq );
+    setRequest( netReq );
 
-  setOpenMode( ReadOnly );
+    setOpenMode( ReadOnly );
 
-  if ( contentType.size() )
-    setHeader( QNetworkRequest::ContentTypeHeader, contentType );
+    if ( contentType.size() )
+        setHeader( QNetworkRequest::ContentTypeHeader, contentType );
 
-  connect( req.get(), SIGNAL( updated() ),
-           this, SLOT( reqUpdated() ) );
+    connect( req.get(), &Dictionary::DataRequest::updated,
+             this, &ArticleResourceReply::reqUpdated );
 
-  connect( req.get(), SIGNAL( finished() ),
-           this, SLOT( reqFinished() ) );
+    connect( req.get(), &Dictionary::DataRequest::finished,
+             this, &ArticleResourceReply::reqFinished );
 
-  if ( req->isFinished() || req->dataSize() > 0 )
-  {
-    connect( this, SIGNAL( readyReadSignal() ),
-             this, SLOT( readyReadSlot() ), Qt::QueuedConnection );
-    connect( this, SIGNAL( finishedSignal() ),
-             this, SLOT( finishedSlot() ), Qt::QueuedConnection );
-
-    emit readyReadSignal();
-
-    if ( req->isFinished() )
+    if ( req->isFinished() || req->dataSize() > 0 )
     {
-      emit finishedSignal();
-      //printf( "In-place finish.\n" );
+        connect( this, &ArticleResourceReply::readyReadSignal,
+                 this, &ArticleResourceReply::readyReadSlot, Qt::QueuedConnection );
+        connect( this, &ArticleResourceReply::finishedSignal,
+                 this, &ArticleResourceReply::finishedSlot, Qt::QueuedConnection );
+
+        emit readyReadSignal();
+
+        if ( req->isFinished() )
+        {
+            emit finishedSignal();
+            //printf( "In-place finish.\n" );
+        }
     }
-  }
 }
 
 ArticleResourceReply::~ArticleResourceReply()
 {
-  req->cancel();
+    req->cancel();
 }
 
 void ArticleResourceReply::reqUpdated()
 {
-  emit readyRead();
+    emit readyRead();
 }
 
 void ArticleResourceReply::reqFinished()
 {
-  emit readyRead();
-  finishedSlot();
+    emit readyRead();
+    finishedSlot();
 }
 
 qint64 ArticleResourceReply::bytesAvailable() const
 {
-  long avail = req->dataSize();
+    long avail = req->dataSize();
 
-  if ( avail < 0 )
-    return 0;
+    if ( avail < 0 )
+        return 0;
 
-  return (size_t) avail - alreadyRead +  QNetworkReply::bytesAvailable();
+    return (size_t) avail - alreadyRead +  QNetworkReply::bytesAvailable();
 }
 
 qint64 ArticleResourceReply::readData( char * out, qint64 maxSize )
 {
-  //printf( "====reading %d bytes\n", (int)maxSize );
+    //printf( "====reading %d bytes\n", (int)maxSize );
 
-  bool finished = req->isFinished();
+    bool finished = req->isFinished();
 
-  long avail = req->dataSize();
+    long avail = req->dataSize();
 
-  if ( avail < 0 )
-    return finished ? -1 : 0;
+    if ( avail < 0 )
+        return finished ? -1 : 0;
 
-  size_t left = (size_t) avail - alreadyRead;
+    size_t left = (size_t) avail - alreadyRead;
 
-  size_t toRead = maxSize < left ? maxSize : left;
+    size_t toRead = maxSize < static_cast<qint64>(left) ? maxSize : left;
 
-  req->getDataSlice( alreadyRead, toRead, out );
+    req->getDataSlice( alreadyRead, toRead, out );
 
-  alreadyRead += toRead;
+    alreadyRead += toRead;
 
-  if ( !toRead && finished )
-    return -1;
-  else
+    if ( !toRead && finished )
+        return -1;
+
     return toRead;
 }
 
 void ArticleResourceReply::readyReadSlot()
 {
-  readyRead();
+    emit readyRead();
 }
 
 void ArticleResourceReply::finishedSlot()
 {
-  if ( req->dataSize() < 0 )
-    error( ContentNotFoundError );
+    if ( req->dataSize() < 0 )
+        emit error( ContentNotFoundError );
 
-  finished();
+    emit finished();
 }
 
 BlockedNetworkReply::BlockedNetworkReply( QObject * parent ): QNetworkReply( parent )
 {
-  setError( QNetworkReply::ContentOperationNotPermittedError, "Content Blocked" );
+    setError( QNetworkReply::ContentOperationNotPermittedError, "Content Blocked" );
 
-  connect( this, SIGNAL( finishedSignal() ), this, SLOT( finishedSlot() ),
-           Qt::QueuedConnection );
+    connect( this, &BlockedNetworkReply::finishedSignal, this, &BlockedNetworkReply::finishedSlot,
+             Qt::QueuedConnection );
 
-  emit finishedSignal(); // This way we call readyRead()/finished() sometime later
+    emit finishedSignal(); // This way we call readyRead()/finished() sometime later
 }
 
 
 void BlockedNetworkReply::finishedSlot()
 {
-  emit readyRead();
-  emit finished();
+    emit readyRead();
+    emit finished();
 }

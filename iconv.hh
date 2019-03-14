@@ -27,12 +27,12 @@ public:
   static char const * const Utf16Le;
   static char const * const Utf8;
 
-  Iconv( char const * to, char const * from ) throw( exCantInit );
+  Iconv( char const * to, char const * from );
 
   // Changes to another pair of encodings. All the internal state is reset.
-  void reinit( char const * to, char const * from ) throw( exCantInit );
+  void reinit( char const * to, char const * from );
 
-  ~Iconv() throw();
+  ~Iconv();
 
   enum Result
   {
@@ -42,19 +42,16 @@ public:
   };
 
   Result convert( void const * & inBuf, size_t & inBytesLeft,
-                  void * & outBuf, size_t & outBytesLeft ) throw( exIncorrectSeq,
-                                                                  exOther );
+                  void * & outBuf, size_t & outBytesLeft );
 
   // Converts a given block of data from the given encoding to a wide string.
   static gd::wstring toWstring( char const * fromEncoding, void const * fromData,
-                                 size_t dataSize )
-    throw( exCantInit, exIncorrectSeq, exPrematureEnd, exOther );
+                                 size_t dataSize );
 
   // Converts a given block of data from the given encoding to an utf8-encoded
   // string.
   static std::string toUtf8( char const * fromEncoding, void const * fromData,
-                             size_t dataSize )
-    throw( exCantInit, exIncorrectSeq, exPrematureEnd, exOther );
+                             size_t dataSize );
 
 private:
 
