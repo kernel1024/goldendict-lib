@@ -139,10 +139,10 @@ std::string CGoldenDictMgr::makeNotFoundBody(const QString &word)
 
 std::string CGoldenDictMgr::makeHtmlHeader(const QString &word) const
 {
-    string result =
-            R"(<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">"
-            "<html><head>"
-            "<meta http-equiv="Content-Type" content="text/html; charset=utf-8">)";
+    string result = R"(<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" )";
+    result += R"("http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">)";
+    result += R"(<html><head>)";
+    result += R"(<meta http-equiv="Content-Type" content="text/html; charset=utf-8">)";
 
     // Add a css stylesheet
 
@@ -456,8 +456,7 @@ void ArticleRequest::bodyFinished()
                 else
                 {
                     // This is the first article
-                    head += R"(<script language="JavaScript">"
-                            "var gdCurrentArticle=")";
+                    head += R"(<script language="JavaScript">var gdCurrentArticle=")";
                     head += gdFrom;
                     head += R"(";</script>)";
                 }
